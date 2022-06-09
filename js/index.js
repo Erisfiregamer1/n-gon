@@ -7,7 +7,9 @@ Math.hash = s => { for (var i = 0, h = 9; i < s.length;) h = Math.imul(h ^ s.cha
 // console.log(date1.getUTCHours())
 // document.getElementById("seed").placeholder = Math.initialSeed = String(date1.getUTCDate() * date1.getUTCFullYear()) // daily seed,  day + year
 
-document.getElementById("seed").placeholder = Math.initialSeed = Math.floor(Date.now() % 100000) //random every time:  just the time in milliseconds UTC
+// document.getElementById("seed").placeholder = Math.initialSeed = Math.floor(Date.now() % 100000) //random every time:  just the time in milliseconds UTC
+
+document.getElementById("seed").placeholder = Math.initialSeed = String(Math.floor(Date.now() % 100000))
 Math.seed = Math.abs(Math.hash(Math.initialSeed)) //update randomizer seed in case the player changed it
 Math.seededRandom = function(min = 0, max = 1) { // in order to work 'Math.seed' must NOT be undefined
     Math.seed = (Math.seed * 9301 + 49297) % 233280;
@@ -50,7 +52,7 @@ const cat = {
 }
 
 const color = { //light
-    background: "#ddd",
+    // background: "#ddd", // used instead:  document.body.style.backgroundColor
     block: "rgba(140,140,140,0.85)",
     blockS: "#222",
     map: "#444",
@@ -185,7 +187,7 @@ window.addEventListener('load', () => {
 const canvas = document.getElementById("canvas");
 //using "const" causes problems in safari when an ID shares the same name.
 const ctx = canvas.getContext("2d");
-// const ctx = canvas.getContext('2d', { alpha: false });  //optimization, but doesn't work
+// const ctx = canvas.getContext('2d', { alpha: false }); //optimization, this works if you wipe with the background color of each level
 
 document.body.style.backgroundColor = "#fff";
 
@@ -218,35 +220,8 @@ for (let i = 0, len = tech.tech.length; i < len; i++) {
 }
 
 const build = {
-    // onLoadPowerUps() {
-    //     const set = getUrlVars()
-    //     if (Object.keys(set).length !== 0) {
-    //         for (const property in set) {
-    //             set[property] = set[property].replace(/%20/g, " ")
-    //             if (property.substring(0, 3) === "gun") b.giveGuns(set[property])
-    //             if (property.substring(0, 3) === "tech") tech.giveTech(set[property])
-    //             if (property === "field") m.setField(set[property])
-    //             if (property === "difficulty") {
-    //                 simulation.difficultyMode = Number(set[property])
-    //                 document.getElementById("difficulty-select").value = Number(set[property])
-    //             }
-    //             if (property === "level") {
-    //                 level.levelsCleared += Number(set[property]);
-    //                 level.difficultyIncrease(Number(set[property]) * simulation.difficultyMode) //increase difficulty based on modes
-    //                 spawn.setSpawnList(); //picks a couple mobs types for a themed random mob spawns
-    //                 level.onLevel++
-    //             }
-    //         }
-    //         for (let i = 0; i < bullet.length; ++i) Matter.Composite.remove(engine.world, bullet[i]);
-    //         bullet = []; //remove any bullets that might have spawned from tech
-    //         if (b.inventory.length > 0) {
-    //             b.activeGun = b.inventory[0] //set first gun to active gun
-    //             simulation.makeGunHUD();
-    //         }
-    //     }
-    // },
     pauseGrid() {
-        //right side
+        //left side
         let botText = ""
         if (tech.nailBotCount) botText += `<br>nail-bots: ${tech.nailBotCount}`
         if (tech.orbitBotCount) botText += `<br>orbital-bots: ${tech.orbitBotCount}`
@@ -262,14 +237,7 @@ const build = {
 <br><br><svg class="SVG-button" onclick="build.shareURL(false)" width="92" height="20" style="padding:0px; margin: 1px;">
     <g stroke='none' fill='#333' stroke-width="2" font-size="14px" font-family="Ariel, sans-serif"> <text x="5" y="15">copy build url</text></g>
 </svg><br>`
-        //{ /* <strong class='color-d'>damage</strong> increase: ${((tech.damageFromTech()-1)*100).toFixed(0)}% */ }
-        // <br>damage difficulty reduction: ${((1-m.dmgScale)*100).toFixed(2)}%
-        // <br>effective damage: ${(((tech.damageFromTech()-1)*m.dmgScale)*100).toFixed(0)}%
-        // <br>
-        // <br><strong class='color-d'>damage</strong> =  ${((tech.damageFromTech())*100).toFixed(0)}% × ${((m.dmgScale)*100).toFixed(2)}% = ${(((tech.damageFromTech())*m.dmgScale)*100).toFixed(0)}%
-        /// <br>heal difficulty scale: ${(simulation.healScale*100).toFixed(1)}%
-        text +=
-            `
+        text += `
 <br>effective <strong class='color-d'>damage</strong>: ${(tech.damageFromTech() * m.dmgScale).toPrecision(4)}
 <br>damage: ${((tech.damageFromTech())).toPrecision(4)}, difficulty: ${((m.dmgScale)).toPrecision(4)}
 <br>
@@ -278,7 +246,7 @@ const build = {
 <br>
 ${botText}
 <br><strong class='color-h'>health</strong>: (${(m.health*100).toFixed(0)} / ${(m.maxHealth*100).toFixed(0)}) &nbsp; <strong class='color-f'>energy</strong>: (${(m.energy*100).toFixed(0)} / ${(m.maxEnergy*100).toFixed(0)})
-<br><strong class='color-g'>gun</strong>: ${b.activeGun !== null ? b.guns[b.activeGun].name: "null"} &nbsp; <strong class='color-g'>ammo</strong>: ${b.activeGun !== null ? b.guns[b.activeGun].ammo: "0"}
+<br><strong class='color-g'>gun</strong>: ${b.activeGun === null || b.activeGun === undefined ? "undefined":b.guns[b.activeGun].name} &nbsp; <strong class='color-g'>ammo</strong>: ${b.activeGun === null || b.activeGun === undefined ? "0":b.guns[b.activeGun].ammo}
 <br><strong><em>fire delay</em></strong> decrease: ${((1-b.fireCDscale)*100).toFixed(b.fireCDscale < 0.1 ? 2 : 0)}%
 <br><strong class='color-dup'>duplication</strong> chance: ${(tech.duplicationChance()*100).toFixed(0)}%
 <br><strong class='color-m'>tech</strong>: ${tech.totalCount}  &nbsp; <strong class='color-r'>research</strong>: ${powerUps.research.count}  
@@ -297,21 +265,29 @@ ${simulation.isCheating ? "<br><br><em>lore disabled</em>": ""}
         el.style.display = "grid"
         el.innerHTML = text
 
-        //left side
+        //right side
         text = "";
-        text += `<div class="pause-grid-module" id ="pause-field"><div class="grid-title"><div class="circle-grid field"></div> &nbsp; ${build.nameLink(m.fieldUpgrades[m.fieldMode].name)}</div> ${m.fieldUpgrades[m.fieldMode].description}</div>`
+        if (tech.isPauseSwitchField && !simulation.isChoosing) {
+            text += `<div class="pause-grid-module" id ="pause-field" style="animation: fieldColorCycle 1s linear infinite alternate;"><div class="grid-title"><div class="circle-grid field"></div> &nbsp; ${build.nameLink(m.fieldUpgrades[m.fieldMode].name)}</div> ${m.fieldUpgrades[m.fieldMode].description}</div>`
+        } else {
+            text += `<div class="pause-grid-module" id ="pause-field"><div class="grid-title"><div class="circle-grid field"></div> &nbsp; ${build.nameLink(m.fieldUpgrades[m.fieldMode].name)}</div> ${m.fieldUpgrades[m.fieldMode].description}</div>`
+        }
+
+        const style = (tech.isPauseEjectTech && !simulation.isChoosing) ? 'style="animation: techColorCycle 1s linear infinite alternate;"' : ''
         for (let i = 0, len = tech.tech.length; i < len; i++) {
-            if (tech.tech[i].count > 0 && !tech.tech[i].isNonRefundable) {
+            if (tech.tech[i].count > 0) {
                 const techCountText = tech.tech[i].count > 1 ? `(${tech.tech[i].count}x)` : "";
-                if (tech.tech[i].isFieldTech) {
-                    text += `<div class="pause-grid-module" id ="${i}-pause-tech" onclick="powerUps.pauseEjectTech(${i})"><div class="grid-title">
+                if (tech.tech[i].isNonRefundable) {
+                    text += `<div class="pause-grid-module" id ="${i}-pause-tech" onclick="powerUps.pauseEjectTech(${i})" style = "border: 0px; opacity:0.5; font-size: 60%; line-height: 130%; margin: 1px; padding-top: 6px; padding-bottom: 6px;"><div class="grid-title">${tech.tech[i].link} ${techCountText}</div>${tech.tech[i].descriptionFunction ? tech.tech[i].descriptionFunction() :tech.tech[i].description}</div></div>`
+                } else if (tech.tech[i].isFieldTech) {
+                    text += `<div class="pause-grid-module" id ="${i}-pause-tech" onclick="powerUps.pauseEjectTech(${i})" ${style}><div class="grid-title">
                                             <span style="position:relative;">
                                                 <div class="circle-grid tech" style="position:absolute; top:0; left:0;opacity:0.8;"></div>
                                               <div class="circle-grid field" style="position:absolute; top:0; left:10px;opacity:0.65;"></div>
                                             </span>
                                             &nbsp; &nbsp; &nbsp; &nbsp; ${tech.tech[i].link} ${techCountText}</div>${tech.tech[i].descriptionFunction ? tech.tech[i].descriptionFunction() :tech.tech[i].description}</div></div>`
                 } else if (tech.tech[i].isGunTech) {
-                    text += `<div class="pause-grid-module" id ="${i}-pause-tech" onclick="powerUps.pauseEjectTech(${i})"><div class="grid-title">
+                    text += `<div class="pause-grid-module" id ="${i}-pause-tech" onclick="powerUps.pauseEjectTech(${i})" ${style}><div class="grid-title">
                                             <span style="position:relative;">
                                                 <div class="circle-grid tech" style="position:absolute; top:0; left:0;opacity:0.8;"></div>
                                                 <div class="circle-grid gun" style="position:absolute; top:0; left:10px; opacity:0.65;"></div>
@@ -320,7 +296,7 @@ ${simulation.isCheating ? "<br><br><em>lore disabled</em>": ""}
                 } else if (tech.tech[i].isLore) {
                     text += `<div class="pause-grid-module"><div class="grid-title lore-text"><div class="circle-grid lore"></div> &nbsp; ${tech.tech[i].name} ${techCountText}</div>${tech.tech[i].descriptionFunction ? tech.tech[i].descriptionFunction() :tech.tech[i].description}</div></div>`
                 } else {
-                    text += `<div class="pause-grid-module" id ="${i}-pause-tech" onclick="powerUps.pauseEjectTech(${i})"><div class="grid-title"><div class="circle-grid tech"></div> &nbsp; ${tech.tech[i].link} ${techCountText}</div>${tech.tech[i].descriptionFunction ? tech.tech[i].descriptionFunction() :tech.tech[i].description}</div></div>`
+                    text += `<div class="pause-grid-module" id ="${i}-pause-tech" onclick="powerUps.pauseEjectTech(${i})" ${style}><div class="grid-title"><div class="circle-grid tech"></div> &nbsp; ${tech.tech[i].link} ${techCountText}</div>${tech.tech[i].descriptionFunction ? tech.tech[i].descriptionFunction() :tech.tech[i].description}</div></div>`
                 }
             } else if (tech.tech[i].isLost) {
                 text += `<div class="pause-grid-module" style="text-decoration: line-through;"><div class="grid-title">${tech.tech[i].link}</div>${tech.tech[i].descriptionFunction ? tech.tech[i].descriptionFunction() :tech.tech[i].description}</div></div>`
@@ -329,11 +305,29 @@ ${simulation.isCheating ? "<br><br><em>lore disabled</em>": ""}
         el = document.getElementById("pause-grid-right")
         el.style.display = "grid"
         el.innerHTML = text
+
+        document.getElementById("tech").style.display = "none"
+        document.getElementById("guns").style.display = "none"
+        document.getElementById("field").style.display = "none"
+        document.getElementById("health").style.display = "none"
+        document.getElementById("health-bg").style.display = "none"
     },
     unPauseGrid() {
+        document.getElementById("tech").style.display = "inline"
+        document.getElementById("guns").style.display = "inline"
+        document.getElementById("field").style.display = "inline"
+        if (tech.isEnergyHealth) {
+            document.getElementById("health").style.display = "none"
+            document.getElementById("health-bg").style.display = "none"
+        } else {
+            document.getElementById("health").style.display = "inline"
+            document.getElementById("health-bg").style.display = "inline"
+        }
         // document.body.style.overflow = "hidden"
         document.getElementById("pause-grid-left").style.display = "none"
         document.getElementById("pause-grid-right").style.display = "none"
+        document.getElementById("pause-grid-right").style.opacity = "1"
+        document.getElementById("pause-grid-left").style.opacity = "1"
         window.scrollTo(0, 0);
     },
     isExperimentSelection: false,
@@ -371,7 +365,7 @@ ${simulation.isCheating ? "<br><br><em>lore disabled</em>": ""}
                 if (!who.classList.contains("build-tech-selected")) who.classList.add("build-tech-selected");
                 tech.giveTech(index)
             } else if (!tech.tech[index].isNonRefundable) {
-                tech.totalCount -= tech.tech[index].count
+                // tech.totalCount -= tech.tech[index].count
                 tech.removeTech(index);
                 who.classList.remove("build-tech-selected");
             } else {
@@ -917,7 +911,7 @@ window.addEventListener("keydown", function(event) {
                     // level.levelAnnounce();
                     document.body.style.cursor = "none";
                     requestAnimationFrame(cycle);
-                } else {
+                } else if (!tech.isNoDraftPause) {
                     simulation.paused = true;
                     build.pauseGrid()
                     document.body.style.cursor = "auto";
@@ -935,6 +929,10 @@ window.addEventListener("keydown", function(event) {
             break
         case input.key.testing:
             if (m.alive && localSettings.loreCount > 0) {
+                if (simulation.difficultyMode > 4) {
+                    simulation.makeTextLog("<em>testing mode disabled for this difficulty</em>");
+                    break
+                }
                 if (simulation.testing) {
                     simulation.testing = false;
                     simulation.loop = simulation.normalLoop
@@ -1109,6 +1107,11 @@ window.addEventListener("keydown", function(event) {
                 setTimeout(() => { for (let i = 0, len = mob.length; i < len; ++i) mob[i].damage(Infinity, true) }, 100);
                 setTimeout(() => { for (let i = 0, len = mob.length; i < len; ++i) mob[i].damage(Infinity, true) }, 200);
                 break
+            case "l":
+                document.getElementById("field").style.display = "none"
+                document.getElementById("guns").style.display = "none"
+                document.getElementById("tech").style.display = "none"
+                break
         }
     }
 });
@@ -1191,9 +1194,9 @@ function localstorageCheck() {
 if (localstorageCheck()) {
     localSettings = JSON.parse(localStorage.getItem("localSettings"))
     if (localSettings) {
+        console.log('localStorage is enabled')
         localSettings.isAllowed = true
         localSettings.isEmpty = false
-        console.log('localStorage is enabled')
     } else {
         console.log('localStorage is enabled, local settings empty')
         localSettings = {
@@ -1202,8 +1205,8 @@ if (localstorageCheck()) {
         }
     }
 } else {
-    localSettings = { isAllowed: false }
     console.log("localStorage is disabled")
+    localSettings = { isAllowed: false }
 }
 
 
@@ -1223,9 +1226,14 @@ if (localSettings.isAllowed && !localSettings.isEmpty) {
 
     simulation.isCommunityMaps = localSettings.isCommunityMaps
     document.getElementById("community-maps").checked = localSettings.isCommunityMaps
+
+    if (localSettings.difficultyMode === undefined) localSettings.difficultyMode = "2"
     simulation.difficultyMode = localSettings.difficultyMode
     lore.setTechGoal()
     document.getElementById("difficulty-select").value = localSettings.difficultyMode
+
+    if (localSettings.fpsCapDefault === undefined) localSettings.fpsCapDefault = 'max'
+    if (localSettings.personalSeeds === undefined) localSettings.personalSeeds = [];
     if (localSettings.fpsCapDefault === 'max') {
         simulation.fpsCapDefault = 999999999;
     } else {
@@ -1234,7 +1242,10 @@ if (localSettings.isAllowed && !localSettings.isEmpty) {
     document.getElementById("fps-select").value = localSettings.fpsCapDefault
 } else {
     console.log('setting default localSettings')
+    const isAllowed = localSettings.isAllowed //don't overwrite isAllowed value
     localSettings = {
+        isAllowed: isAllowed,
+        personalSeeds: [],
         isJunkExperiment: false,
         isCommunityMaps: false,
         difficultyMode: '2',

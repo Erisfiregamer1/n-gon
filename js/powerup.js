@@ -137,7 +137,7 @@ const powerUps = {
     },
     doDefault() {
         //draw power ups
-        ctx.globalAlpha = 0.4 * Math.sin(m.cycle * 0.15) + 0.6;
+        ctx.globalAlpha = 0.4 * Math.sin(simulation.cycle * 0.15) + 0.6;
         for (let i = 0, len = powerUp.length; i < len; ++i) {
             ctx.beginPath();
             ctx.arc(powerUp[i].position.x, powerUp[i].position.y, powerUp[i].size, 0, 2 * Math.PI);
@@ -248,9 +248,7 @@ const powerUps = {
         } else if (type === "field") {
             m.setField(index)
         } else if (type === "tech") {
-            setTimeout(() => {
-                powerUps.lastTechIndex = index
-            }, 10);
+            setTimeout(() => { powerUps.lastTechIndex = index }, 10);
             simulation.makeTextLog(`<span class='color-var'>tech</span>.giveTech("<span class='color-text'>${tech.tech[index].name}</span>")`);
             tech.giveTech(index)
         }
@@ -259,17 +257,16 @@ const powerUps = {
     showDraft() {
         // document.getElementById("choose-grid").style.gridTemplateColumns = "repeat(2, minmax(370px, 1fr))"
         // document.getElementById("choose-background").style.display = "inline"
-        document.getElementById("choose-background").style.visibility = "visible"
-        document.getElementById("choose-background").style.opacity = "0.6"
+        // document.getElementById("choose-background").style.visibility = "visible"
+        // document.getElementById("choose-background").style.opacity = "0.8"
         // document.getElementById("choose-grid").style.display = "grid"
-        document.getElementById("choose-grid").style.transitionDuration = "0.25s";
-        document.getElementById("choose-grid").style.visibility = "visible"
-        document.getElementById("choose-grid").style.opacity = "1"
+
         //disable clicking for 1/2 a second to prevent mistake clicks
         document.getElementById("choose-grid").style.pointerEvents = "none";
+        document.body.style.cursor = "none";
         setTimeout(() => {
+            if (!tech.isNoDraftPause) document.body.style.cursor = "auto";
             document.getElementById("choose-grid").style.pointerEvents = "auto";
-            document.body.style.cursor = "auto";
             document.getElementById("choose-grid").style.transitionDuration = "0s";
         }, 500);
 
@@ -277,12 +274,41 @@ const powerUps = {
         //     document.body.style.overflowY = "scroll";
         //     document.body.style.overflowX = "hidden";
         // }
-        simulation.paused = true;
         simulation.isChoosing = true; //stops p from un pausing on key down
-        build.pauseGrid(true)
+
+        if (!simulation.paused) {
+            if (tech.isNoDraftPause) {
+
+                // const cycle = () => {
+                //     m.fireCDcycle = m.cycle + 1; //fire cooldown
+                //     if (simulation.isChoosing && m.alive) requestAnimationFrame(cycle)
+                // }
+                // requestAnimationFrame(cycle);
+
+                document.getElementById("choose-grid").style.opacity = "0.8"
+            } else {
+                simulation.paused = true;
+                document.getElementById("choose-grid").style.opacity = "1"
+            }
+            document.getElementById("choose-grid").style.transitionDuration = "0.25s";
+            document.getElementById("choose-grid").style.visibility = "visible"
+
+            requestAnimationFrame(() => {
+                ctx.fillStyle = `rgba(221,221,221,0.6)`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            });
+            document.getElementById("pause-grid-right").style.opacity = "0.3"
+            document.getElementById("pause-grid-left").style.opacity = "0.3"
+        }
+        build.pauseGrid()
     },
-    endDraft(type, isCanceled = false) {
+    endDraft(type, isCanceled = false) { //type should be a gun, tech, or field
         if (isCanceled) {
+            if (tech.isCancelTech && Math.random() < 0.94) {
+                // powerUps.research.use('tech')
+                powerUps[type].effect();
+                return
+            }
             if (tech.isCancelDuplication) {
                 tech.cancelCount++
                 tech.maxDuplicationEvent()
@@ -300,6 +326,10 @@ const powerUps = {
                     powerUps.spawn(m.pos.x + 40 * (Math.random() - 0.5), m.pos.y + 40 * (Math.random() - 0.5), spawnType, false);
                 }
             }
+            // if (tech.isCancelTech && Math.random() < 0.3) {
+            //     powerUps.spawn(m.pos.x + 40 * (Math.random() - 0.5), m.pos.y + 40 * (Math.random() - 0.5), "tech", false);
+            //     simulation.makeTextLog(`<strong>options exchange</strong>: returns 1 <strong class='color-m'>tech</strong>`)
+            // }
             if (tech.isBanish && type === 'tech') { // banish researched tech by adding them to the list of banished tech
                 const banishLength = tech.isDeterminism ? 1 : 3 + tech.isExtraChoice * 2
                 for (let i = 0; i < banishLength; i++) {
@@ -324,11 +354,11 @@ const powerUps = {
         document.body.style.cursor = "none";
         // document.body.style.overflow = "hidden"
         // if (m.alive){}
-        simulation.paused = false;
+        if (simulation.paused) requestAnimationFrame(cycle);
+        if (m.alive) simulation.paused = false;
         simulation.isChoosing = false; //stops p from un pausing on key down
-        if (m.immuneCycle < m.cycle + 15) m.immuneCycle = m.cycle + 15; //player is immune to damage for 30 cycles
         build.unPauseGrid()
-        requestAnimationFrame(cycle);
+        if (m.immuneCycle < m.cycle + 15) m.immuneCycle = m.cycle + 15; //player is immune to damage for 30 cycles
         if (m.holdingTarget) m.drop();
     },
     research: {
@@ -353,7 +383,7 @@ const powerUps = {
             }
             if (tech.isRerollBots) {
                 let delay = 0
-                for (const cost = 2 + Math.floor(0.1666 * b.totalBots()); powerUps.research.count > cost - 1; powerUps.research.count -= cost) {
+                for (const cost = 2 + Math.floor(0.2 * b.totalBots()); powerUps.research.count > cost - 1; powerUps.research.count -= cost) { // 1/5 = 0.2
                     delay += 500
                     setTimeout(() => {
                         b.randomBot()
@@ -471,7 +501,7 @@ const powerUps = {
             }
 
             if (tech.healGiveMaxEnergy) {
-                tech.healMaxEnergyBonus += 0.08
+                tech.healMaxEnergyBonus += 0.1
                 m.setMaxEnergy();
             }
         },
@@ -579,7 +609,7 @@ const powerUps = {
             let choice3 = -1
             if (choice1 > -1) {
                 let text = ""
-                if (!tech.isSuperDeterminism) text += `<div class='cancel' onclick='powerUps.endDraft("field",true)'>✕</div>`
+                if (!tech.isSuperDeterminism) text += `<div class='cancel' onclick='powerUps.endDraft("field",true)'>${tech.isCancelTech ? "?":"✕"}</div>`
                 text += `<h3 style = 'color:#fff; text-align:left; margin: 0px;'>field</h3>`
                 text += `<div class="choose-grid-module" onclick="powerUps.choose('field',${choice1})"><div class="grid-title"><div class="circle-grid field"></div> &nbsp; ${m.fieldUpgrades[choice1].name}</div> ${m.fieldUpgrades[choice1].description}</div>`
                 powerUps.field.choiceLog.push(choice1)
@@ -689,7 +719,7 @@ const powerUps = {
                 }
 
                 let text = ""
-                if (!tech.isSuperDeterminism) text += `<div class='cancel' onclick='powerUps.endDraft("tech",true)'>✕</div>`
+                if (!tech.isSuperDeterminism) text += `<div class='cancel' onclick='powerUps.endDraft("tech",true)'>${tech.isCancelTech ? "?":"✕"}</div>`
                 text += `<h3 style = 'color:#fff; text-align:left; margin: 0px;'>tech</h3>`
                 let choice1 = pick()
                 // console.log(choice1)
@@ -728,6 +758,10 @@ const powerUps = {
                             text += `<div class="choose-grid-module" onclick="powerUps.choose('field',${choiceField})"><div class="grid-title"><div class="circle-grid field"></div> &nbsp; ${m.fieldUpgrades[choiceField].name}</div> ${m.fieldUpgrades[choiceField].description}</div>`
                         }
                     }
+                    if (tech.tooManyTechChoices) {
+                        tech.tooManyTechChoices--
+                        for (let i = 0; i < powerUps.tech.lastTotalChoices; i++) pick()
+                    }
 
                     if (tech.isBrainstorm && !tech.isBrainstormActive && !simulation.isChoosing) {
                         tech.isBrainstormActive = true
@@ -736,7 +770,7 @@ const powerUps = {
 
                         function cycle() {
                             count++
-                            if (count < 600 && simulation.isChoosing) {
+                            if (count < tech.brainStormDelay * 5 && simulation.isChoosing) {
                                 if (!(count % tech.brainStormDelay)) {
                                     powerUps.tech.effect();
                                     document.getElementById("choose-grid").style.pointerEvents = "auto"; //turn off the normal 500ms delay
@@ -829,7 +863,7 @@ const powerUps = {
             let choice3 = -1
             if (choice1 > -1) {
                 let text = ""
-                if (!tech.isSuperDeterminism) text += `<div class='cancel' onclick='powerUps.endDraft("gun",true)'>✕</div>`
+                if (!tech.isSuperDeterminism) text += `<div class='cancel' onclick='powerUps.endDraft("gun",true)'>${tech.isCancelTech ? "?":"✕"}</div>`
                 text += `<h3 style = 'color:#fff; text-align:left; margin: 0px;'>gun</h3>`
                 text += `<div class="choose-grid-module" onclick="powerUps.choose('gun',${choice1})"><div class="grid-title"><div class="circle-grid gun"></div> &nbsp; ${b.guns[choice1].name}</div> ${b.guns[choice1].description}</div>`
                 if (!tech.isDeterminism) {
@@ -872,7 +906,7 @@ const powerUps = {
         powerUps.research.currentRerollCount = 0
         if (tech.isTechDamage && who.name === "tech") m.damage(0.11)
         if (tech.isMassEnergy) m.energy += 2;
-        if (tech.isMineDrop && bullet.length < 150 && Math.random() < 0.60) {
+        if (tech.isMineDrop && bullet.length < 150 && Math.random() < 0.6) {
             if (tech.isLaserMine && input.down) {
                 b.laserMine(who.position)
             } else {
@@ -889,6 +923,7 @@ const powerUps = {
                 if (document.getElementById("tech-switch")) document.getElementById("tech-switch").innerHTML = ` = <strong>ON</strong>`
                 m.eyeFillColor = m.fieldMeterColor //'#0cf'
             }
+            if (tech.isRelayEnergy) m.setMaxEnergy();
         }
     },
     // giveRandomAmmo() {
@@ -993,38 +1028,41 @@ const powerUps = {
         }
     },
     ejectTech(choose = 'random') {
-        //find which tech you have
-        if (choose === 'random') {
-            const have = []
-            for (let i = 0; i < tech.tech.length; i++) {
-                if (tech.tech[i].count > 0 && !tech.tech[i].isNonRefundable) have.push(i)
-            }
-            if (have.length === 0) {
+        if (!simulation.isChoosing)
+
+
+            //find which tech you have
+            if (choose === 'random') {
+                const have = []
                 for (let i = 0; i < tech.tech.length; i++) {
-                    if (tech.tech[i].count > 0) have.push(i)
+                    if (tech.tech[i].count > 0 && !tech.tech[i].isNonRefundable) have.push(i)
                 }
-            }
-
-            if (have.length) {
-                choose = have[Math.floor(Math.random() * have.length)]
-                // simulation.makeTextLog(`<div class='circle tech'></div> &nbsp; <strong>${tech.tech[choose].name}</strong> was ejected`, 600) //message about what tech was lost
-                simulation.makeTextLog(`<span class='color-var'>tech</span>.remove("<span class='color-text'>${tech.tech[choose].name}</span>")`)
-
-                for (let i = 0; i < tech.tech[choose].count; i++) {
-                    powerUps.directSpawn(m.pos.x, m.pos.y, "tech");
-                    powerUp[powerUp.length - 1].isDuplicated = true
+                if (have.length === 0) {
+                    for (let i = 0; i < tech.tech.length; i++) {
+                        if (tech.tech[i].count > 0) have.push(i)
+                    }
                 }
-                // remove a random tech from the list of tech you have
-                tech.tech[choose].remove();
-                tech.tech[choose].count = 0;
-                tech.tech[choose].isLost = true;
-                simulation.updateTechHUD();
-                m.fieldCDcycle = m.cycle + 30; //disable field so you can't pick up the ejected tech
-                return true
-            } else {
-                return false
-            }
-        } else if (tech.tech[choose].count) {
+
+                if (have.length) {
+                    choose = have[Math.floor(Math.random() * have.length)]
+                    // simulation.makeTextLog(`<div class='circle tech'></div> &nbsp; <strong>${tech.tech[choose].name}</strong> was ejected`, 600) //message about what tech was lost
+                    simulation.makeTextLog(`<span class='color-var'>tech</span>.remove("<span class='color-text'>${tech.tech[choose].name}</span>")`)
+
+                    for (let i = 0; i < tech.tech[choose].count; i++) {
+                        powerUps.directSpawn(m.pos.x, m.pos.y, "tech");
+                        // powerUp[powerUp.length - 1].isDuplicated = true
+                    }
+                    // remove a random tech from the list of tech you have
+                    tech.tech[choose].remove();
+                    tech.tech[choose].count = 0;
+                    tech.tech[choose].isLost = true;
+                    simulation.updateTechHUD();
+                    m.fieldCDcycle = m.cycle + 30; //disable field so you can't pick up the ejected tech
+                    return true
+                } else {
+                    return false
+                }
+            } else if (tech.tech[choose].count) {
             // simulation.makeTextLog(`<div class='circle tech'></div> &nbsp; <strong>${tech.tech[choose].name}</strong> was ejected`, 600) //message about what tech was lost
             simulation.makeTextLog(`<span class='color-var'>tech</span>.remove("<span class='color-text'>${tech.tech[choose].name}</span>")`)
 
@@ -1044,14 +1082,15 @@ const powerUps = {
         }
     },
     pauseEjectTech(index) {
-        if (tech.isPauseEjectTech || simulation.testing) {
-            if (Math.random() < 0.04 || tech.tech[index].isFromAppliedScience) {
+        if ((tech.isPauseEjectTech || simulation.testing) && !simulation.isChoosing && !tech.tech[index].isNonRefundable) {
+            if (Math.random() < 0.16 || tech.tech[index].isFromAppliedScience || (tech.tech[index].bonusResearch !== undefined && tech.tech[index].bonusResearch > powerUps.research.count)) {
                 tech.removeTech(index)
                 powerUps.spawn(m.pos.x + 40 * (Math.random() - 0.5), m.pos.y + 40 * (Math.random() - 0.5), "research", false);
             } else {
                 powerUps.ejectTech(index)
             }
             document.getElementById(`${index}-pause-tech`).style.textDecoration = "line-through"
+            document.getElementById(`${index}-pause-tech`).style.animation = ""
             document.getElementById(`${index}-pause-tech`).onclick = null
         }
     },

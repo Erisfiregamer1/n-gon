@@ -72,6 +72,7 @@ function playerOffGroundCheck(event) {
         if (pairs[i].bodyA === jumpSensor || pairs[i].bodyB === jumpSensor) {
             if (m.onGround && m.numTouching === 0) {
                 m.onGround = false;
+                m.lastOnGroundCycle = m.cycle;
                 m.hardLandCD = 0 // disable hard landing
                 if (m.checkHeadClear()) {
                     if (m.crouch) {
@@ -108,7 +109,7 @@ function collisionChecks(event) {
                         let dmg = Math.min(Math.max(0.025 * Math.sqrt(mob[k].mass), 0.05), 0.3) * simulation.dmgScale; //player damage is capped at 0.3*dmgScale of 1.0
                         if (m.isCloak) dmg *= 0.5
                         mob[k].foundPlayer();
-                        if (tech.isRewindAvoidDeath && m.energy > 0.66) { //CPT reversal runs in m.damage, but it stops the rest of the collision code here too
+                        if (tech.isRewindAvoidDeath && m.energy > 0.66 && dmg > 0.01) { //CPT reversal runs in m.damage, but it stops the rest of the collision code here too
                             m.damage(dmg);
                             return
                         }
@@ -117,13 +118,14 @@ function collisionChecks(event) {
                                 tech.isFlipFlopOn = false
                                 if (document.getElementById("tech-flip-flop")) document.getElementById("tech-flip-flop").innerHTML = ` = <strong>OFF</strong>`
                                 m.eyeFillColor = 'transparent'
-                                if (!tech.isFlipFlopHarm) m.damage(dmg);
+                                m.damage(dmg);
                             } else {
                                 tech.isFlipFlopOn = true //immune to damage this hit, lose immunity for next hit
                                 if (document.getElementById("tech-flip-flop")) document.getElementById("tech-flip-flop").innerHTML = ` = <strong>ON</strong>`
                                 m.eyeFillColor = m.fieldMeterColor //'#0cf'
-                                m.damage(dmg);
+                                if (!tech.isFlipFlopHarm) m.damage(dmg);
                             }
+                            if (tech.isFlipFlopHealth) m.setMaxHealth();
                         } else {
                             m.damage(dmg); //normal damage
                         }
@@ -188,16 +190,33 @@ function collisionChecks(event) {
                                     time: simulation.drawTime
                                 });
                             }
-                            if (tech.isLessDamageReduction && !mob[k].shield) mob[k].damageReduction *= mob[k].isBoss ? 1.01 : 1.06
+                            if (tech.isLessDamageReduction && !mob[k].shield) mob[k].damageReduction *= mob[k].isBoss ? (mob[k].isFinalBoss ? 1.0005 : 1.0025) : 1.05
                             return;
                         }
                         //mob + body collisions
                         if (obj.classType === "body" && obj.speed > 6) {
                             const v = Vector.magnitude(Vector.sub(mob[k].velocity, obj.velocity));
                             if (v > 9) {
+                                if (tech.blockDmg) { //electricity
+                                    // console.log("hi")
+                                    Matter.Body.setVelocity(mob[k], { x: 0.5 * mob[k].velocity.x, y: 0.5 * mob[k].velocity.y });
+                                    if (tech.isBlockRadiation && !mob[k].isShielded && !mob[k].isMobBullet) {
+                                        mobs.statusDoT(mob[k], tech.blockDmg * m.dmgScale * 4 / 12, 360) //200% increase -> x (1+2) //over 7s -> 360/30 = 12 half seconds -> 3/12
+                                    } else {
+                                        mob[k].damage(tech.blockDmg * m.dmgScale)
+                                        simulation.drawList.push({
+                                            x: pairs[i].activeContacts[0].vertex.x,
+                                            y: pairs[i].activeContacts[0].vertex.y,
+                                            radius: 28 * mob[k].damageReduction + 3,
+                                            color: "rgba(255,0,255,0.8)",
+                                            time: 4
+                                        });
+                                    }
+                                }
+
                                 let dmg = tech.blockDamage * m.dmgScale * v * obj.mass * (tech.isMobBlockFling ? 2.5 : 1) * (tech.isBlockRestitution ? 2.5 : 1);
                                 if (mob[k].isShielded) dmg *= 0.7
-                                // console.log(dmg)
+
                                 mob[k].damage(dmg, true);
                                 if (tech.isBlockPowerUps && !mob[k].alive && mob[k].isDropPowerUp && m.throwCycle > m.cycle) {
                                     let type = tech.isEnergyNoAmmo ? "heal" : "ammo"
@@ -210,7 +229,7 @@ function collisionChecks(event) {
                                 }
 
                                 const stunTime = dmg / Math.sqrt(obj.mass)
-                                if (stunTime > 0.5) mobs.statusStun(mob[k], 60 + 60 * Math.sqrt(stunTime))
+                                if (stunTime > 0.5 && mob[k].memory !== Infinity) mobs.statusStun(mob[k], 60 + 60 * Math.sqrt(stunTime))
                                 if (mob[k].alive && mob[k].distanceToPlayer2() < 1000000 && !m.isCloak) mob[k].foundPlayer();
                                 if (tech.fragments && obj.speed > 10 && !obj.hasFragmented) {
                                     obj.hasFragmented = true;

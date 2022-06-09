@@ -171,7 +171,7 @@ summary {
 
 #choose-background {
     position: absolute;
-    z-index: 3;
+    z-index: 2;
     width: 100%;
     height: 100%;
     background-color: #ccc;
@@ -236,7 +236,7 @@ summary {
     margin: 0px;
 
     display: none;
-    grid-template-columns: 320px;
+    grid-template-columns: 325px;
     /* grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); */
     grid-auto-rows: minmax(auto, auto);
     grid-gap: 0px;
@@ -934,6 +934,27 @@ summary {
 
 .lore-text {
     animation: textColor 3s linear infinite;
+}
+
+
+@keyframes fieldColorCycle {
+    0% {
+        background-color: rgb(255, 255, 255)
+    }
+
+    100% {
+        background-color: rgb(200, 255, 255)
+    }
+}
+
+@keyframes techColorCycle {
+    0% {
+        background-color: hsl(253, 100%, 100%)
+    }
+
+    100% {
+        background-color: hsl(253, 100%, 90%)
+    }
 }
 
 @keyframes bgColor {

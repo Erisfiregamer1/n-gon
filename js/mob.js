@@ -115,13 +115,19 @@ const mobs = {
             who.isStunned = true;
             who.status.push({
                 effect() {
-                    who.seePlayer.yes = false;
-                    who.seePlayer.recall = 0;
-                    who.seePlayer.position = {
-                        x: who.position.x + 100 * (Math.random() - 0.5),
-                        y: who.position.y + 100 * (Math.random() - 0.5)
+                    if (who.memory !== Infinity) {
+                        who.seePlayer.yes = false;
+                        who.seePlayer.recall = 0;
+                        who.seePlayer.position = {
+                            x: who.position.x + 100 * (Math.random() - 0.5),
+                            y: who.position.y + 100 * (Math.random() - 0.5)
+                        }
+                    } else {
+                        Matter.Body.setVelocity(who, {
+                            x: who.velocity.x * 0.6,
+                            y: who.velocity.y * 0.6
+                        });
                     }
-                    // && !who.isBoss
                     if (who.velocity.y < 2) who.force.y += who.mass * 0.0004 //extra gravity
 
                     //draw health bar
@@ -157,7 +163,7 @@ const mobs = {
             who.status.push({
                 effect() {
                     if ((simulation.cycle - this.startCycle) % 30 === 0) {
-                        let dmg = m.dmgScale * this.dmg
+                        let dmg = m.dmgScale * this.dmg * tech.radioactiveDamage
                         who.damage(dmg);
                         if (who.damageReduction) {
                             simulation.drawList.push({ //add dmg to draw queue
@@ -1060,26 +1066,17 @@ const mobs = {
                     dmg *= tech.damageFromTech()
                     //mobs specific damage changes
                     if (tech.isFarAwayDmg) dmg *= 1 + Math.sqrt(Math.max(500, Math.min(3000, this.distanceToPlayer())) - 500) * 0.0067 //up to 50% dmg at max range of 3500
-                    // if (this.shield) dmg *= 0.075
-                    // if (this.isBoss) dmg *= 0.25
-                    // if (this.damageReduction < 1) { //only used for bosses with this.armor()  or shields
-                    //     this.damageReductionGoal += dmg * this.damageReductionScale //reduce damageReductionGoal
-                    //     dmg *= this.damageReduction
-                    // }
                     dmg *= this.damageReduction
                     //energy and heal drain should be calculated after damage boosts
                     if (tech.energySiphon && dmg !== Infinity && this.isDropPowerUp && m.immuneCycle < m.cycle) m.energy += Math.min(this.health, dmg) * tech.energySiphon
-                    if (tech.healthDrain && dmg !== Infinity && this.isDropPowerUp) {
-                        m.addHealth(Math.min(this.health, dmg) * tech.healthDrain)
-                        if (m.health > m.maxHealth) m.health = m.maxHealth
+                    if (tech.healthDrain && dmg !== Infinity && this.isDropPowerUp && Math.random() < tech.healthDrain * Math.min(this.health, dmg)) {
+                        powerUps.spawn(m.pos.x + 20 * (Math.random() - 0.5), m.pos.y + 20 * (Math.random() - 0.5), "heal");
                     }
                     dmg /= Math.sqrt(this.mass)
                     this.health -= dmg
                     //this.fill = this.color + this.health + ')';
                     this.onDamage(dmg); //custom damage effects
-                    if (this.health < 0.05 && this.alive) {
-                        this.death();
-                    }
+                    if ((this.health < 0.05 || isNaN(this.health)) && this.alive) this.death();
                 }
             },
             onDamage() {
@@ -1128,7 +1125,7 @@ const mobs = {
                     if (tech.iceIXOnDeath && this.isSlowed) {
                         for (let i = 0, len = 2 * Math.sqrt(Math.min(this.mass, 25)) * tech.iceIXOnDeath; i < len; i++) b.iceIX(3, Math.random() * 2 * Math.PI, this.position)
                     }
-                    if (tech.deathSpawnsFromBoss || (tech.deathSpawns && this.isDropPowerUp)) {
+                    if (tech.deathSpawnsFromBoss || tech.deathSpawns) {
                         const spawns = tech.deathSpawns + tech.deathSpawnsFromBoss
                         const len = Math.min(12, spawns * Math.ceil(Math.random() * simulation.difficulty * spawns))
                         for (let i = 0; i < len; i++) {
@@ -1138,6 +1135,22 @@ const mobs = {
                                 y: this.velocity.x + (Math.random() - 0.5) * 10
                             });
                         }
+                    }
+
+                    if (tech.isDeathSkipTime && !m.isBodiesAsleep) {
+                        requestAnimationFrame(() => {
+                            simulation.timePlayerSkip(this.isBoss ? 45 : 25)
+                            simulation.loop(); //ending with a wipe and normal loop fixes some very minor graphical issues where things are draw in the wrong locations
+                        }); //wrapping in animation frame prevents errors, probably
+
+                        // if (tech.isFlipFlopOn) {
+                        //     m.rewind(this.isBoss ? 45 : 25)
+                        // } else {
+                        //     requestAnimationFrame(() => {
+                        //         simulation.timePlayerSkip(this.isBoss ? 45 : 25)
+                        //         simulation.loop(); //ending with a wipe and normal loop fixes some very minor graphical issues where things are draw in the wrong locations
+                        //     }); //wrapping in animation frame prevents errors, probably
+                        // }
                     }
                     if (tech.isEnergyLoss) m.energy *= 0.75;
                     powerUps.spawnRandomPowerUp(this.position.x, this.position.y);
@@ -1151,7 +1164,7 @@ const mobs = {
                             for (let i = 0; i < len; i++) b.spore(this.position)
                         }
                     } else if (tech.isExplodeMob) {
-                        b.explosion(this.position, Math.min(600, Math.sqrt(this.mass + 1.5) * (22 + 60 * Math.random())))
+                        b.explosion(this.position, Math.min(700, Math.sqrt(this.mass + 6) * (30 + 60 * Math.random())))
                     } else if (tech.nailsDeathMob) {
                         b.targetedNail(this.position, tech.nailsDeathMob, 39 + 6 * Math.random())
                     }
@@ -1365,7 +1378,7 @@ const mobs = {
                     mob.splice(i, 1);
                     if (tech.isMobBlockFling) {
                         const who = body[body.length - 1]
-                        b.targetedBlock(who, true)
+                        b.targetedBlock(who)
                         Matter.Body.setAngularVelocity(who, (0.5 + 0.2 * Math.random()) * (Math.random() < 0.5 ? -1 : 1));
                     }
                 } else {

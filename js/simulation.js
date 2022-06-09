@@ -89,15 +89,32 @@ const simulation = {
                 m.airControl()
             }
             m.move();
+            level.custom();
             simulation.checks();
             mobs.loop();
-            // m.draw();
             m.walk_cycle += m.flipLegs * m.Vx;
-
             m.hold();
+            level.customTopLayer();
             b.fire();
             b.bulletRemove();
             b.bulletDo();
+        }
+        simulation.isTimeSkipping = false;
+    },
+    timePlayerSkip(cycles = 60) {
+        simulation.isTimeSkipping = true;
+        for (let i = 0; i < cycles; i++) {
+            simulation.cycle++;
+            simulation.gravity();
+            Engine.update(engine, simulation.delta);
+            // level.custom();
+            // level.customTopLayer();
+            if (!m.isBodiesAsleep) {
+                simulation.checks();
+                mobs.loop();
+            }
+            b.bulletRemove();
+            if (!m.isBodiesAsleep) b.bulletDo();
         }
         simulation.isTimeSkipping = false;
     },
@@ -399,7 +416,7 @@ const simulation = {
                 }
             }
         }
-        if (tech.isCrouchAmmo) tech.isCrouchAmmo = 1 //this prevents hacking the tech by switching guns
+        if (tech.crouchAmmoCount) tech.crouchAmmoCount = 1 //this prevents hacking the tech by switching guns
 
         b.activeGun = b.inventory[b.inventoryGun];
         if (b.guns[b.activeGun].charge) b.guns[b.activeGun].charge = 0; //if switching into foam set charge to 0
@@ -504,9 +521,7 @@ const simulation = {
             }
         }, len * swapPeriod);
     },
-    wipe() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-    },
+    wipe() {}, //set in simulation.startGame
     gravity() {
         function addGravity(bodies, magnitude) {
             for (var i = 0; i < bodies.length; i++) {
@@ -631,6 +646,17 @@ const simulation = {
         document.getElementById("splash").style.display = "none"; //hides the element that spawned the function
         document.getElementById("dmg").style.display = "inline";
         document.getElementById("health-bg").style.display = "inline";
+
+        document.getElementById("tech").style.display = "inline"
+        document.getElementById("guns").style.display = "inline"
+        document.getElementById("field").style.display = "inline"
+        document.getElementById("health").style.display = "inline"
+        document.getElementById("health-bg").style.display = "inline"
+        // document.body.style.overflow = "hidden"
+        document.getElementById("pause-grid-left").style.display = "none"
+        document.getElementById("pause-grid-right").style.display = "none"
+        document.getElementById("pause-grid-right").style.opacity = "1"
+        document.getElementById("pause-grid-left").style.opacity = "1"
         ctx.globalCompositeOperation = "source-over"
         ctx.shadowBlur = 0;
         // ctx.shadowColor = '#000';
@@ -653,6 +679,7 @@ const simulation = {
             if (b.guns[i].name === "nail gun") b.guns[i].chooseFireMethod()
             if (b.guns[i].name === "super balls") b.guns[i].chooseFireMethod()
             if (b.guns[i].name === "harpoon") b.guns[i].chooseFireMethod()
+            if (b.guns[i].name === "foam") b.guns[i].chooseFireMethod()
         }
         tech.dynamoBotCount = 0;
         tech.nailBotCount = 0;
@@ -690,7 +717,6 @@ const simulation = {
 
         level.onLevel = 0;
         level.levelsCleared = 0;
-
         //resetting difficulty
         // simulation.difficulty = 0;
         level.setDifficulty()
@@ -709,9 +735,11 @@ const simulation = {
         simulation.makeTextLog(`engine.timing.timeScale <span class='color-symbol'>=</span> 1`);
         // simulation.makeTextLog(`input.key.field<span class='color-symbol'>:</span> ["<span class='color-text'>${input.key.field}</span>", "<span class='color-text'>MouseRight</span>"]`);
 
-        document.getElementById("health").style.display = "inline"
-        document.getElementById("health-bg").style.display = "inline"
+        // document.getElementById("health").style.display = "inline"
+        // document.getElementById("health-bg").style.display = "inline"
         m.alive = true;
+        m.onGround = false
+        m.lastOnGroundCycle = 0
         m.setMaxHealth()
         m.health = 0;
         m.addHealth(0.25)
@@ -720,7 +748,7 @@ const simulation = {
 
         //set to default field
         tech.healMaxEnergyBonus = 0
-        m.setMaxEnergy();
+        // m.setMaxEnergy();
         m.energy = 0
         m.immuneCycle = 0;
         // simulation.makeTextLog(`${simulation.SVGrightMouse}<strong style='font-size:30px;'> ${m.fieldUpgrades[m.fieldMode].name}</strong><br><span class='faded'></span><br>${m.fieldUpgrades[m.fieldMode].description}`, 600);
@@ -778,7 +806,7 @@ const simulation = {
             }
             for (i = 0, len = b.guns.length; i < len; i++) { //find which gun is mine
                 if (b.guns[i].name === "mine") {
-                    if (tech.isCrouchAmmo) count = Math.ceil(count / 2)
+                    if (tech.crouchAmmoCount) count = Math.ceil(count / 2)
                     b.guns[i].ammo += count
                     if (tech.ammoCap) b.guns[i].ammo = Math.min(tech.ammoCap, b.guns[i].ammo)
                     simulation.updateGunHUD();
@@ -814,11 +842,83 @@ const simulation = {
         let holdTarget = (m.holdingTarget) ? m.holdingTarget : undefined //if player is holding something this remembers it before it gets deleted
         tech.deathSpawnsFromBoss = 0;
         simulation.fallHeight = 3000;
+        document.body.style.backgroundColor = "#eee" //"#d8dadf";
+        color.map = "#444";
+
         m.fireCDcycle = 0
         m.drop();
         m.hole.isOn = false;
-        level.zones = [];
         simulation.drawList = [];
+
+        if (tech.isDronesTravel && m.alive) {
+            //count drones
+            let droneCount = 0
+            let sporeCount = 0
+            let wormCount = 0
+            let deliveryCount = 0
+            for (let i = 0; i < bullet.length; ++i) {
+                if (bullet[i].isDrone) {
+                    droneCount++
+                    if (bullet[i].isImproved) deliveryCount++
+                } else if (bullet[i].isSpore) {
+                    sporeCount++
+                } else if (bullet[i].wormSize) {
+                    wormCount++
+                }
+            }
+
+            //respawn drones in animation frame
+            let respawnDrones = () => {
+                if (droneCount > 0) {
+                    requestAnimationFrame(respawnDrones);
+                    if (!simulation.paused && !simulation.isChoosing) {
+                        const where = { x: level.enter.x + 50, y: level.enter.y - 60 }
+                        droneCount--
+                        if (tech.isDroneRadioactive) {
+                            b.droneRadioactive({ x: where.x + 100 * (Math.random() - 0.5), y: where.y + 100 * (Math.random() - 0.5) }, 0)
+                        } else {
+                            b.drone({ x: where.x + 100 * (Math.random() - 0.5), y: where.y + 120 * (Math.random() - 0.5) }, 0)
+                            if (tech.isDroneGrab && deliveryCount > 0) {
+                                const who = bullet[bullet.length - 1]
+                                who.isImproved = true;
+                                const SCALE = 2.25
+                                Matter.Body.scale(who, SCALE, SCALE);
+                                who.lookFrequency = 30 + Math.floor(11 * Math.random());
+                                who.endCycle += 3000 * tech.droneCycleReduction * tech.isBulletsLastLonger
+                                deliveryCount--
+                            }
+                        }
+                    }
+                }
+            }
+            requestAnimationFrame(respawnDrones);
+
+            //respawn spores in animation frame
+            let respawnSpores = () => {
+                if (sporeCount > 0) {
+                    requestAnimationFrame(respawnSpores);
+                    if (!simulation.paused && !simulation.isChoosing) {
+                        sporeCount--
+                        const where = { x: level.enter.x + 50, y: level.enter.y - 60 }
+                        b.spore({ x: where.x + 100 * (Math.random() - 0.5), y: where.y + 120 * (Math.random() - 0.5) })
+                    }
+                }
+            }
+            requestAnimationFrame(respawnSpores);
+
+            //respawn worms in animation frame
+            let respawnWorms = () => {
+                if (wormCount > 0) {
+                    requestAnimationFrame(respawnWorms);
+                    if (!simulation.paused && !simulation.isChoosing) {
+                        wormCount--
+                        const where = { x: level.enter.x + 50, y: level.enter.y - 60 }
+                        b.worm({ x: where.x + 100 * (Math.random() - 0.5), y: where.y + 120 * (Math.random() - 0.5) })
+                    }
+                }
+            }
+            requestAnimationFrame(respawnWorms);
+        }
 
         function removeAll(array) {
             // for (let i = 0; i < array.length; ++i) Matter.Composite.remove(engine.world, array[i]);
@@ -931,6 +1031,7 @@ const simulation = {
                 m.damage(0.1 * simulation.difficultyMode);
                 m.energy -= 0.1 * simulation.difficultyMode
             }
+            if (isNaN(player.position.x)) m.death();
 
             // if (tech.isEnergyDamage) {
             //   document.getElementById("tech-capacitor").innerHTML = `(+${(m.energy/0.05).toFixed(0)}%)`
@@ -945,12 +1046,12 @@ const simulation = {
 
             if (m.lastKillCycle + 300 > m.cycle) { //effects active for 5 seconds after killing a mob
                 if (tech.isEnergyRecovery && m.immuneCycle < m.cycle) m.energy += m.maxEnergy * 0.05
-                if (tech.isHealthRecovery) m.addHealth(0.01 * m.maxHealth)
+                if (tech.isHealthRecovery) m.addHealth(0.005 * m.maxHealth)
             }
 
             if (!(m.cycle % 420)) { //once every 7 seconds
                 if (tech.isZeno) {
-                    m.health *= 0.93 //remove 7%
+                    m.health *= 0.95 //remove 5%
                     m.displayHealth();
                 }
                 if (tech.cyclicImmunity && m.immuneCycle < m.cycle + tech.cyclicImmunity) m.immuneCycle = m.cycle + tech.cyclicImmunity; //player is immune to damage for 60 cycles
