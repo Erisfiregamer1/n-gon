@@ -152,6 +152,12 @@ window.addEventListener('load', () => {
             }
             if (property === "level") document.getElementById("starting-level").value = Math.max(Number(set[property]) - 1, 0)
             if (property === "noPower") document.getElementById("no-power-ups").checked = Number(set[property])
+            if (property === "molMode") {
+                simulation.molecularMode = Number(set[property])
+                const i = 4 //update experiment text
+                m.fieldUpgrades[i].description = m.fieldUpgrades[i].setDescription()
+                document.getElementById(`field-${i}`).innerHTML = `<div class="grid-title"><div class="circle-grid field"></div> &nbsp; ${build.nameLink(m.fieldUpgrades[i].name)}</div> ${m.fieldUpgrades[i].description}`
+            }
             // if (property === "seed") {
             //     document.getElementById("seed").placeholder = Math.initialSeed = String(set[property])
             //     Math.seed = Math.abs(Math.hash(Math.initialSeed))
@@ -218,10 +224,6 @@ window.onresize = () => {
 for (let i = 0, len = tech.tech.length; i < len; i++) {
     if (!tech.tech[i].link) tech.tech[i].link = `<a target="_blank" href='https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(tech.tech[i].name).replace(/'/g, '%27')}&title=Special:Search' class="link">${tech.tech[i].name}</a>`
 }
-
-
-//<br>effective <strong class='color-defense'>defense</strong>: ${(1-simulation.dmgScale*m.harmReduction()).toPrecision(3)}
-//<br>effective <strong class='color-d'>damage</strong>: ${(tech.damageFromTech() * m.dmgScale).toPrecision(3)}
 const build = {
     pauseGrid() {
         //left side
@@ -242,11 +244,13 @@ const build = {
 </svg><br>`
         text += `
 <br><strong class='color-d'>damage</strong>: ${((tech.damageFromTech())).toPrecision(3)} &nbsp; &nbsp; difficulty: ${((m.dmgScale)).toPrecision(3)}
-<br><strong class='color-defense'>defense</strong>: ${(1-m.harmReduction()).toPrecision(3)} &nbsp; &nbsp; difficulty: ${(simulation.dmgScale).toPrecision(3)}
+<br><strong class='color-defense'>defense</strong>: ${(1-m.harmReduction()).toPrecision(3)} &nbsp; &nbsp; difficulty: ${(1/simulation.dmgScale).toPrecision(3)}
 <br><strong><em>fire rate</em></strong>: ${((1-b.fireCDscale)*100).toFixed(b.fireCDscale < 0.1 ? 2 : 0)}%
 <br><strong class='color-dup'>duplication</strong>: ${(tech.duplicationChance()*100).toFixed(0)}%
 ${botText}
-<br><br><strong class='color-h'>health</strong>: (${(m.health*100).toFixed(0)} / ${(m.maxHealth*100).toFixed(0)}) &nbsp; <strong class='color-f'>energy</strong>: (${(m.energy*100).toFixed(0)} / ${(m.maxEnergy*100).toFixed(0)})
+<br>
+<br><strong class='color-h'>health</strong>: (${(m.health*100).toFixed(0)} / ${(m.maxHealth*100).toFixed(0)})
+<br><strong class='color-f'>energy</strong>: (${(m.energy*100).toFixed(0)} / ${(m.maxEnergy*100).toFixed(0)})
 <br><strong class='color-g'>gun</strong>: ${b.activeGun === null || b.activeGun === undefined ? "undefined":b.guns[b.activeGun].name} &nbsp; <strong class='color-g'>ammo</strong>: ${b.activeGun === null || b.activeGun === undefined ? "0":b.guns[b.activeGun].ammo}
 <br><strong class='color-m'>tech</strong>: ${tech.totalCount}  &nbsp; <strong class='color-r'>research</strong>: ${powerUps.research.count}     
 <br>
@@ -261,9 +265,8 @@ ${simulation.isCheating ? "<br><br><em>lore disabled</em>": ""}
             text += `<div class="pause-grid-module"><div class="grid-title"><div class="circle-grid gun"></div> &nbsp; ${build.nameLink(b.guns[b.inventory[i]].name)} - <span style="font-size:100%;font-weight: 100;">${b.guns[b.inventory[i]].ammo}</span></div> ${b.guns[b.inventory[i]].description}</div>`
         }
         let el = document.getElementById("pause-grid-left")
-        el.style.display = "grid"
+        el.style.display = tech.isNoDraftPause ? "none" : "grid" //disabled for eternalism because eternalism lets the player play while this menu is up but the menu doesn't update
         el.innerHTML = text
-
         //right side
         text = "";
         if (tech.isPauseSwitchField && !simulation.isChoosing) {
@@ -302,7 +305,7 @@ ${simulation.isCheating ? "<br><br><em>lore disabled</em>": ""}
             }
         }
         el = document.getElementById("pause-grid-right")
-        el.style.display = "grid"
+        el.style.display = tech.isNoDraftPause ? "none" : "grid" //disabled for eternalism because eternalism lets the player play while this menu is up but the menu doesn't update
         el.innerHTML = text
 
         document.getElementById("tech").style.display = "none"
@@ -357,7 +360,27 @@ ${simulation.isCheating ? "<br><br><em>lore disabled</em>": ""}
                 document.getElementById("field-" + m.fieldMode).classList.remove("build-field-selected");
                 m.setField(index)
                 who.classList.add("build-field-selected");
+            } else if (m.fieldMode === 4) {
+                const i = 4 //update experiment text
+                simulation.molecularMode++
+                if (simulation.molecularMode > i - 1) simulation.molecularMode = 0
+                m.fieldUpgrades[i].description = m.fieldUpgrades[i].setDescription()
+                document.getElementById(`field-${i}`).innerHTML = `<div class="grid-title"><div class="circle-grid field"></div> &nbsp; ${build.nameLink(m.fieldUpgrades[i].name)}</div> ${m.fieldUpgrades[i].description}`
             }
+
+            // if (m.fieldMode === 4 && simulation.molecularMode < 3) {
+            //     simulation.molecularMode++
+            //     m.fieldUpgrades[4].description = m.fieldUpgrades[4].setDescription()
+            // } else {
+            //     m.setField((m.fieldMode === m.fieldUpgrades.length - 1) ? 1 : m.fieldMode + 1) //cycle to next field
+
+            //     if (m.fieldMode === 4) {
+            //         simulation.molecularMode = 0
+            //         m.fieldUpgrades[4].description = m.fieldUpgrades[4].setDescription()
+            //     }
+            // }
+
+
         } else if (type === "tech") {
             if (tech.tech[index].count < tech.tech[index].maxCount) {
                 // if (!tech.tech[index].isLore && !tech.tech[index].isNonRefundable && !who.classList.contains("build-tech-selected")) who.classList.add("build-tech-selected");
@@ -569,6 +592,13 @@ ${simulation.isCheating ? "<br><br><em>lore disabled</em>": ""}
                 }
             }
         }
+        url += `&molMode=${encodeURIComponent(simulation.molecularMode)}`
+        // if (property === "molMode") {
+        //     simulation.molecularMode = Number(set[property])
+        //     m.fieldUpgrades[i].description = m.fieldUpgrades[i].setDescription()
+        //     document.getElementById(`field-${i}`).innerHTML = `<div class="grid-title"><div class="circle-grid field"></div> &nbsp; ${build.nameLink(m.fieldUpgrades[i].name)}</div> ${m.fieldUpgrades[i].description}`
+        // }
+
         url += `&field=${encodeURIComponent(m.fieldUpgrades[m.fieldMode].name.trim())}`
         url += `&difficulty=${simulation.difficultyMode}`
         if (isCustom) {
@@ -919,7 +949,16 @@ window.addEventListener("keydown", function(event) {
                     if (tech.isPauseSwitchField || simulation.testing) {
                         document.getElementById("pause-field").addEventListener("click", () => {
                             const energy = m.energy
-                            m.setField((m.fieldMode === m.fieldUpgrades.length - 1) ? 1 : m.fieldMode + 1) //cycle to next field
+                            if (m.fieldMode === 4 && simulation.molecularMode < 3) {
+                                simulation.molecularMode++
+                                m.fieldUpgrades[4].description = m.fieldUpgrades[4].setDescription()
+                            } else {
+                                m.setField((m.fieldMode === m.fieldUpgrades.length - 1) ? 1 : m.fieldMode + 1) //cycle to next field
+                                if (m.fieldMode === 4) {
+                                    simulation.molecularMode = 0
+                                    m.fieldUpgrades[4].description = m.fieldUpgrades[4].setDescription()
+                                }
+                            }
                             m.energy = energy
                             document.getElementById("pause-field").innerHTML = `<div class="grid-title"><div class="circle-grid field"></div> &nbsp; ${m.fieldUpgrades[m.fieldMode].name}</div> ${m.fieldUpgrades[m.fieldMode].description}`
                         });
@@ -931,7 +970,7 @@ window.addEventListener("keydown", function(event) {
             if (m.alive && localSettings.loreCount > 0) {
                 if (simulation.difficultyMode > 4) {
                     simulation.makeTextLog("<em>testing mode disabled for this difficulty</em>");
-                    break
+                    // break
                 }
                 if (simulation.testing) {
                     simulation.testing = false;
@@ -1124,18 +1163,18 @@ document.body.addEventListener("mousemove", (e) => {
 document.body.addEventListener("mouseup", (e) => {
     // input.fire = false;
     // console.log(e)
-    if (e.which === 3) {
-        input.field = false;
-    } else {
+    if (e.button === 0) {
         input.fire = false;
+    } else if (e.button === 2) {
+        input.field = false;
     }
 });
 
 document.body.addEventListener("mousedown", (e) => {
-    if (e.which === 3) {
-        input.field = true;
-    } else {
+    if (e.button === 0) {
         input.fire = true;
+    } else if (e.button === 2) {
+        input.field = true;
     }
 });
 

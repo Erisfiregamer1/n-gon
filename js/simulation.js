@@ -105,6 +105,7 @@ const simulation = {
         simulation.isTimeSkipping = true;
         for (let i = 0; i < cycles; i++) {
             simulation.cycle++;
+            // m.walk_cycle += (m.flipLegs * m.Vx) * 0.5; //makes the legs look like they are moving fast this is just gonna run for each method call since it needs some tweaking
             simulation.gravity();
             Engine.update(engine, simulation.delta);
             // level.custom();
@@ -113,11 +114,50 @@ const simulation = {
                 simulation.checks();
                 mobs.loop();
             }
+            if (m.fieldMode !== 7) m.hold();
             b.bulletRemove();
             if (!m.isBodiesAsleep) b.bulletDo();
         }
         simulation.isTimeSkipping = false;
     },
+    // timeMobSkip() {
+    //     simulation.gravity();
+    //     Engine.update(engine, simulation.delta);
+    //     simulation.wipe();
+    //     simulation.textLog();
+    //     if (m.onGround) {
+    //         m.groundControl()
+    //     } else {
+    //         m.airControl()
+    //     }
+    //     m.move();
+    //     m.look();
+    //     simulation.camera();
+    //     level.custom();
+    //     powerUps.do();
+    //     mobs.draw();
+    //     simulation.draw.cons();
+    //     simulation.draw.body();
+    //     if (!m.isBodiesAsleep) {
+    //         simulation.checks();
+    //         // mobs.loop();
+    //     }
+    //     mobs.healthBar();
+    //     m.draw();
+    //     m.hold();
+    //     // v.draw(); //working on visibility work in progress
+    //     level.customTopLayer();
+    //     simulation.draw.drawMapPath();
+    //     b.fire();
+    //     b.bulletRemove();
+    //     b.bulletDraw();
+    //     if (!m.isBodiesAsleep) b.bulletDo();
+    //     simulation.drawCircle();
+    //     // simulation.clip();
+    //     ctx.restore();
+    //     simulation.drawCursor();
+    //     // simulation.pixelGraphics();
+    // },
     mouse: {
         x: canvas.width / 2,
         y: canvas.height / 2
@@ -140,7 +180,7 @@ const simulation = {
     cyclePaused: 0,
     fallHeight: 6000, //below this y position the player dies
     lastTimeStamp: 0, //tracks time stamps for measuring delta
-    delta: 1000 / 60, //speed of game engine //looks like it has to be 16 to match player input
+    delta: 1000 / 60, //speed of game engine //looks like it has to be 16.6666 to match player input
     buttonCD: 0,
     isHorizontalFlipped: false, //makes some maps flipped horizontally
     levelsCleared: 0,
@@ -151,6 +191,7 @@ const simulation = {
     accelScale: null, //set in levels.setDifficulty
     CDScale: null, //set in levels.setDifficulty
     isNoPowerUps: false,
+    molecularMode: Math.floor(4 * Math.random()), //0 spores, 1 missile, 2 ice IX, 3 drones //randomize molecular assembler field type
     // dropFPS(cap = 40, time = 15) {
     //   simulation.fpsCap = cap
     //   simulation.fpsInterval = 1000 / simulation.fpsCap;
@@ -521,6 +562,38 @@ const simulation = {
             }
         }, len * swapPeriod);
     },
+    // warp(translation = 5, skew = 0.05, scale = 0.05) {
+    // if (simulation.cycle % 2) { //have to alternate frames or else successive rumbles over write the effects of the previous rumble
+    // requestAnimationFrame(() => { ctx.setTransform(1, 0, 0, 1, 0, 0); }) //reset
+    // requestAnimationFrame(() => {
+    //     if (!simulation.paused && m.alive) {
+    //         ctx.transform(1 - scale * (Math.random() - 0.5), skew * (Math.random() - 0.5), skew * (Math.random() - 0.5), 1 - scale * (Math.random() - 0.5), translation * (Math.random() - 0.5), translation * (Math.random() - 0.5)); //ctx.transform(Horizontal scaling. A value of 1 results in no scaling,  Vertical skewing,   Horizontal skewing,   Vertical scaling. A value of 1 results in no scaling,   Horizontal translation (moving),   Vertical translation (moving)) //https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/setTransform
+    //     }
+    // })
+
+    //reset
+    // ctx.transform(1, 0, 0, 1, 0, 0); //ctx.transform(Horizontal scaling. A value of 1 results in no scaling,  Vertical skewing,   Horizontal skewing,   Vertical scaling. A value of 1 results in no scaling,   Horizontal translation (moving),   Vertical translation (moving)) //https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/setTransform
+
+    // }
+    // const loop = () => {
+    //     if (!simulation.paused && m.alive) {
+    //         ctx.save();
+    //         ctx.transform(1 - scale * (Math.random() - 0.5), skew * (Math.random() - 0.5), skew * (Math.random() - 0.5), 1 - scale * (Math.random() - 0.5), translation * (Math.random() - 0.5), translation * (Math.random() - 0.5)); //ctx.transform(Horizontal scaling. A value of 1 results in no scaling,  Vertical skewing,   Horizontal skewing,   Vertical scaling. A value of 1 results in no scaling,   Horizontal translation (moving),   Vertical translation (moving))
+    //         requestAnimationFrame(() => { ctx.restore(); })
+    //     }
+    // }
+    // requestAnimationFrame(loop);
+
+    // function loop() {
+    //     if (!simulation.paused && m.alive) {
+    //         ctx.save();
+    //         ctx.transform(1 - scale * (Math.random() - 0.5), skew * (Math.random() - 0.5), skew * (Math.random() - 0.5), 1 - scale * (Math.random() - 0.5), translation * (Math.random() - 0.5), translation * (Math.random() - 0.5)); //ctx.transform(Horizontal scaling. A value of 1 results in no scaling,  Vertical skewing,   Horizontal skewing,   Vertical scaling. A value of 1 results in no scaling,   Horizontal translation (moving),   Vertical translation (moving))
+    //         requestAnimationFrame(() => { ctx.restore(); })
+    //     }
+    //     requestAnimationFrame(loop);
+    // }
+    // requestAnimationFrame(loop);
+    // },
     wipe() {}, //set in simulation.startGame
     gravity() {
         function addGravity(bodies, magnitude) {
@@ -536,7 +609,6 @@ const simulation = {
     },
     firstRun: true,
     splashReturn() {
-
         document.getElementById("previous-seed").innerHTML = `previous seed: <span style="font-size:80%;">${Math.initialSeed}</span><br>`
         document.getElementById("seed").value = Math.initialSeed = Math.seed //randomize initial seed
 
@@ -659,6 +731,10 @@ const simulation = {
         document.getElementById("pause-grid-left").style.opacity = "1"
         ctx.globalCompositeOperation = "source-over"
         ctx.shadowBlur = 0;
+        requestAnimationFrame(() => {
+            ctx.setTransform(1, 0, 0, 1, 0, 0); //reset warp effect
+            ctx.setLineDash([]) //reset stroke dash effect
+        })
         // ctx.shadowColor = '#000';
         if (!m.isShipMode) {
             m.draw = m.drawDefault //set the play draw to normal, undoing some junk tech
@@ -790,6 +866,7 @@ const simulation = {
     },
     clearNow: false,
     clearMap() {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
         if (m.alive) {
             if (tech.isLongitudinal) {
                 for (i = 0, len = b.guns.length; i < len; i++) { //find which gun
@@ -817,7 +894,7 @@ const simulation = {
             if (tech.isMutualism && !tech.isEnergyHealth) {
                 for (let i = 0; i < bullet.length; i++) {
                     if (bullet[i].isMutualismActive) {
-                        m.health += 0.005 + 0.005 * tech.isSporeWorm
+                        m.health += 0.005 + 0.005 * (bullet[i].isSpore || bullet[i].isFlea)
                         if (m.health > m.maxHealth) m.health = m.maxHealth;
                         m.displayHealth();
                     }
@@ -838,6 +915,7 @@ const simulation = {
             }
         }
         simulation.lastLogTime = 0; //clear previous messages
+        spawn.allowShields = true;
         powerUps.totalPowerUps = powerUp.length
         let holdTarget = (m.holdingTarget) ? m.holdingTarget : undefined //if player is holding something this remembers it before it gets deleted
         tech.deathSpawnsFromBoss = 0;
@@ -855,6 +933,7 @@ const simulation = {
             let droneCount = 0
             let sporeCount = 0
             let wormCount = 0
+            let fleaCount = 0
             let deliveryCount = 0
             for (let i = 0; i < bullet.length; ++i) {
                 if (bullet[i].isDrone) {
@@ -864,6 +943,8 @@ const simulation = {
                     sporeCount++
                 } else if (bullet[i].wormSize) {
                     wormCount++
+                } else if (bullet[i].isFlea) {
+                    fleaCount++
                 }
             }
 
@@ -918,6 +999,27 @@ const simulation = {
                 }
             }
             requestAnimationFrame(respawnWorms);
+
+            //respawn fleas in animation frame
+            let respawnFleas = () => {
+                if (fleaCount > 0) {
+                    requestAnimationFrame(respawnFleas);
+                    if (!simulation.paused && !simulation.isChoosing) {
+                        fleaCount--
+                        const where = { x: level.enter.x + 50, y: level.enter.y - 60 }
+                        const speed = 6 + 3 * Math.random()
+                        const angle = 2 * Math.PI * Math.random()
+                        b.flea({ x: where.x + 100 * (Math.random() - 0.5), y: where.y + 120 * (Math.random() - 0.5) }, { x: speed * Math.cos(angle), y: speed * Math.sin(angle) })
+                    }
+                }
+            }
+            requestAnimationFrame(respawnFleas);
+        }
+
+        if (tech.isQuantumEraser) {
+            for (let i = 0, len = mob.length; i < len; i++) {
+                if (mob[i].isDropPowerUp && mob[i].alive) tech.quantumEraserCount++
+            }
         }
 
         function removeAll(array) {
@@ -1358,15 +1460,16 @@ const simulation = {
                 const dx = Math.max(25, round(simulation.mouseInGame.x) - x)
                 const dy = Math.max(25, round(simulation.mouseInGame.y) - y)
 
-                if (e.which === 2) {
+                if (e.button === 2) {
                     if (level.isProcedural) {
                         simulation.outputMapString(`spawn.randomMob(x+${x}, y+${y}, 0);`);
                     } else {
                         simulation.outputMapString(`spawn.randomMob(${x}, ${y}, 0);`);
                     }
-
+                } else if (e.button === 4) {
+                    simulation.outputMapString(`${Math.floor(simulation.constructMouseDownPosition.x)}, ${Math.floor(simulation.constructMouseDownPosition.y)}`);
                 } else if (simulation.mouseInGame.x > simulation.constructMouseDownPosition.x && simulation.mouseInGame.y > simulation.constructMouseDownPosition.y) { //make sure that the width and height are positive
-                    if (e.which === 1) { //add map
+                    if (e.button === 1) { //add map
                         if (level.isProcedural) {
                             simulation.outputMapString(`spawn.mapRect(x+${x}, y+${y}, ${dx}, ${dy});`);
                         } else {
@@ -1382,7 +1485,7 @@ const simulation = {
                         Composite.add(engine.world, map[len]); //add to world
                         simulation.draw.setPaths() //update map graphics
 
-                    } else if (e.which === 3) { //add body
+                    } else if (e.button === 3) { //add body
                         if (level.isProcedural) {
                             simulation.outputMapString(`spawn.bodyRect(x+${x}, y+${y}, ${dx}, ${dy});`);
                         } else {

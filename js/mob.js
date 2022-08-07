@@ -59,9 +59,32 @@ const mobs = {
         }
 
         function applySlow(whom) {
-            if (!whom.shield && !whom.isShielded && who.alive) {
-                if (tech.isIceMaxHealthLoss && who.health > 0.66 && who.damageReduction > 0) who.health = 0.66
-                if (tech.isIceKill && who.health < 0.33 && who.damageReduction > 0) who.death();
+            if (!whom.shield && !whom.isShielded && whom.alive) {
+                if (tech.isIceMaxHealthLoss && whom.health > 0.65 && whom.damageReduction > 0) whom.health = 0.66
+                if (tech.isIceKill && whom.health < 0.34 && whom.damageReduction > 0 && whom.alive) {
+                    simulation.drawList.push({
+                        x: whom.position.x,
+                        y: whom.position.y,
+                        radius: whom.radius * 1.2,
+                        color: "rgb(0,100,255)",
+                        time: 8
+                    });
+                    simulation.drawList.push({
+                        x: whom.position.x,
+                        y: whom.position.y,
+                        radius: whom.radius * 0.7,
+                        color: "rgb(0,100,255)",
+                        time: 12
+                    });
+                    simulation.drawList.push({
+                        x: whom.position.x,
+                        y: whom.position.y,
+                        radius: whom.radius * 0.4,
+                        color: "rgb(0,100,255)",
+                        time: 16
+                    });
+                    whom.death();
+                }
                 if (whom.isBoss) cycles = Math.floor(cycles * 0.25)
                 let i = whom.status.length
                 while (i--) {
@@ -149,7 +172,6 @@ const mobs = {
                         ctx.lineTo(who.vertices[j].x, who.vertices[j].y);
                     }
                     ctx.lineTo(who.vertices[0].x, who.vertices[0].y);
-                    ctx.stroke();
                     ctx.fill();
                 },
                 endEffect() {
@@ -565,6 +587,22 @@ const mobs = {
                     ctx.setLineDash([50 + 120 * Math.random(), 50 * Math.random()]);
                     ctx.stroke(); // Draw it
                     ctx.setLineDash([]);
+                }
+            },
+            wing(a, radius = 250, ellipticity = 0.4, dmg = 0.0006) {
+                const minorRadius = radius * ellipticity
+                const perp = { x: Math.cos(a), y: Math.sin(a) } //
+                const where = Vector.add(this.position, Vector.mult(perp, radius + 0.8 * this.radius))
+
+                ctx.beginPath();
+                ctx.ellipse(where.x, where.y, radius, minorRadius, a, 0, 2 * Math.PI)
+                ctx.fill();
+
+                //check for wing -> player damage
+                const hitPlayer = Matter.Query.ray([player], this.position, Vector.add(this.position, Vector.mult(perp, radius * 2.05)), minorRadius)
+                if (hitPlayer.length && m.immuneCycle < m.cycle) {
+                    m.damage(dmg * simulation.dmgScale);
+                    // m.immuneCycle = m.cycle + tech.collisionImmuneCycles; //player is immune to damage
                 }
             },
             searchSpring() {
@@ -1139,9 +1177,9 @@ const mobs = {
                         }
                     }
 
-                    if (tech.isDeathSkipTime && !m.isBodiesAsleep) {
+                    if (tech.deathSkipTime && !m.isBodiesAsleep) {
                         requestAnimationFrame(() => {
-                            simulation.timePlayerSkip(this.isBoss ? 45 : 25)
+                            simulation.timePlayerSkip((this.isBoss ? 45 : 25) * tech.deathSkipTime)
                             simulation.loop(); //ending with a wipe and normal loop fixes some very minor graphical issues where things are draw in the wrong locations
                         }); //wrapping in animation frame prevents errors, probably
 
@@ -1158,7 +1196,14 @@ const mobs = {
                     powerUps.spawnRandomPowerUp(this.position.x, this.position.y);
                     m.lastKillCycle = m.cycle; //tracks the last time a kill was made, mostly used in simulation.checks()
                     if (Math.random() < tech.sporesOnDeath) {
-                        if (tech.isSporeWorm) {
+                        if (tech.isSporeFlea) {
+                            const len = Math.min(25, Math.floor(2 + this.mass * (0.5 + 0.5 * Math.random()))) / 2
+                            for (let i = 0; i < len; i++) {
+                                const speed = 10 + 5 * Math.random()
+                                const angle = 2 * Math.PI * Math.random()
+                                b.flea(this.position, { x: speed * Math.cos(angle), y: speed * Math.sin(angle) })
+                            }
+                        } else if (tech.isSporeWorm) {
                             const len = Math.min(25, Math.floor(2 + this.mass * (0.5 + 0.5 * Math.random()))) / 2
                             for (let i = 0; i < len; i++) b.worm(this.position)
                         } else {
@@ -1182,10 +1227,12 @@ const mobs = {
                     }
                     if (tech.isAddRemoveMaxHealth) {
                         if (this.isBoss && this.isDropPowerUp) {
-                            powerUps.spawn(this.position.x, this.position.y, "tech", false)
-                            // if (0.5 < Math.random()) powerUps.spawn(this.position.x, this.position.y, "tech", false)
+                            powerUps.spawn(this.position.x + 20, this.position.y, "tech", false)
+                            powerUps.spawn(this.position.x - 20, this.position.y, "ammo", false)
+                            powerUps.spawn(this.position.x, this.position.y + 20, "research", false)
+                            powerUps.spawn(this.position.x, this.position.y - 20, "heal", false)
                         } else {
-                            const amount = 0.0045
+                            const amount = 0.005
                             if (tech.isEnergyHealth) {
                                 if (m.maxEnergy > amount) {
                                     tech.healMaxEnergyBonus -= amount
@@ -1366,8 +1413,11 @@ const mobs = {
                     mob.splice(i, 1);
                     if (tech.isMobBlockFling) {
                         const who = body[body.length - 1]
-                        b.targetedBlock(who)
-                        Matter.Body.setAngularVelocity(who, (0.5 + 0.2 * Math.random()) * (Math.random() < 0.5 ? -1 : 1));
+                        if (!who.isNotHoldable) {
+                            b.targetedBlock(who)
+                            Matter.Body.setAngularVelocity(who, (0.5 + 0.2 * Math.random()) * (Math.random() < 0.5 ? -1 : 1));
+                            // who.torque += who.inertia * 0.002 * (Math.random() - 0.5)
+                        }
                     }
                 } else {
                     Matter.Composite.remove(engine.world, this);
