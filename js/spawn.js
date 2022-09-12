@@ -5,8 +5,8 @@ const spawn = {
     randomBossList: [
         "orbitalBoss", "historyBoss", "shooterBoss", "cellBossCulture", "bomberBoss", "spiderBoss", "launcherBoss", "laserTargetingBoss",
         "powerUpBoss", "powerUpBossBaby", "streamBoss", "pulsarBoss", "spawnerBossCulture", "grenadierBoss", "growBossCulture", "blinkBoss",
-        "snakeSpitBoss", "laserBombingBoss", "blockBoss", "revolutionBoss", "slashBoss", "shieldingBoss", "timeSkipBoss",
-        "dragonFlyBoss", "beetleBoss"
+        "snakeSpitBoss", "laserBombingBoss", "blockBoss", "revolutionBoss", "slashBoss", "shieldingBoss",
+        "timeSkipBoss", "dragonFlyBoss", "beetleBoss"
     ],
     bossTypeSpawnOrder: [], //preset list of boss names calculated at the start of a run by the randomSeed
     bossTypeSpawnIndex: 0, //increases as the boss type cycles
@@ -142,7 +142,7 @@ const spawn = {
             const pick = spawn.pickList[Math.floor(Math.random() * spawn.pickList.length)];
             spawn[pick](x, y);
         }
-        if (tech.isMoreMobs || (tech.isDuplicateBoss && Math.random() < tech.duplicationChance())) {
+        if (tech.isDuplicateBoss && Math.random() < tech.duplicationChance()) {
             const pick = spawn.pickList[Math.floor(Math.random() * spawn.pickList.length)];
             spawn[pick](x, y);
         }
@@ -158,7 +158,7 @@ const spawn = {
                 spawn[pick](x + Math.round((Math.random() - 0.5) * 20) + i * size * 2.5, y + Math.round((Math.random() - 0.5) * 20), size);
             }
         }
-        if (tech.isMoreMobs || (tech.isDuplicateBoss && Math.random() < tech.duplicationChance())) {
+        if (tech.isDuplicateBoss && Math.random() < tech.duplicationChance()) {
             for (let i = 0; i < num; ++i) {
                 const pick = spawn.pickList[Math.floor(Math.random() * spawn.pickList.length)];
                 spawn[pick](x + Math.round((Math.random() - 0.5) * 20) + i * size * 2.5, y + Math.round((Math.random() - 0.5) * 20), size);
@@ -241,45 +241,47 @@ const spawn = {
             tech.isHarmMACHO = false;
         }
         me.do = function() {
-            const sine = Math.sin(simulation.cycle * 0.015)
-            this.radius = 370 * (1 + 0.1 * sine)
-            //chase player
-            const sub = Vector.sub(player.position, this.position)
-            const mag = Vector.magnitude(sub)
-            // follow physics
-            // Matter.Body.setVelocity(this, { x: 0, y: 0 });
-            // const where = Vector.add(this.position, Vector.mult(Vector.normalise(sub), this.chaseSpeed))
-            // if (mag > 10) Matter.Body.setPosition(this, { x: where.x, y: where.y });
+            if (!simulation.isTimeSkipping) {
+                const sine = Math.sin(simulation.cycle * 0.015)
+                this.radius = 370 * (1 + 0.1 * sine)
+                //chase player
+                const sub = Vector.sub(player.position, this.position)
+                const mag = Vector.magnitude(sub)
+                // follow physics
+                // Matter.Body.setVelocity(this, { x: 0, y: 0 });
+                // const where = Vector.add(this.position, Vector.mult(Vector.normalise(sub), this.chaseSpeed))
+                // if (mag > 10) Matter.Body.setPosition(this, { x: where.x, y: where.y });
 
-            //realistic physics
-            const force = Vector.mult(Vector.normalise(sub), 0.000000003)
-            this.force.x += force.x
-            this.force.y += force.y
+                //realistic physics
+                const force = Vector.mult(Vector.normalise(sub), 0.000000003)
+                this.force.x += force.x
+                this.force.y += force.y
 
 
-            if (mag < this.radius) { //buff to player when inside radius
-                tech.isHarmMACHO = true;
+                if (mag < this.radius) { //buff to player when inside radius
+                    tech.isHarmMACHO = true;
 
-                //draw halo
-                ctx.strokeStyle = "rgba(80,120,200,0.2)" //"rgba(255,255,0,0.2)" //ctx.strokeStyle = `rgba(0,0,255,${0.5+0.5*Math.random()})`
+                    //draw halo
+                    ctx.strokeStyle = "rgba(80,120,200,0.2)" //"rgba(255,255,0,0.2)" //ctx.strokeStyle = `rgba(0,0,255,${0.5+0.5*Math.random()})`
+                    ctx.beginPath();
+                    ctx.arc(m.pos.x, m.pos.y, 36, 0, 2 * Math.PI);
+                    ctx.lineWidth = 10;
+                    ctx.stroke();
+                    // ctx.strokeStyle = "rgba(255,255,0,0.17)" //ctx.strokeStyle = `rgba(0,0,255,${0.5+0.5*Math.random()})`
+                    // ctx.beginPath();
+                    // ctx.arc(this.position.x, this.position.y, this.radius, 0, 2 * Math.PI);
+                    // ctx.lineWidth = 30;
+                    // ctx.stroke();
+                } else {
+                    tech.isHarmMACHO = false;
+                }
+                //draw outline
                 ctx.beginPath();
-                ctx.arc(m.pos.x, m.pos.y, 36, 0, 2 * Math.PI);
-                ctx.lineWidth = 10;
+                ctx.arc(this.position.x, this.position.y, this.radius + 15, 0, 2 * Math.PI);
+                ctx.strokeStyle = "#000"
+                ctx.lineWidth = 1;
                 ctx.stroke();
-                // ctx.strokeStyle = "rgba(255,255,0,0.17)" //ctx.strokeStyle = `rgba(0,0,255,${0.5+0.5*Math.random()})`
-                // ctx.beginPath();
-                // ctx.arc(this.position.x, this.position.y, this.radius, 0, 2 * Math.PI);
-                // ctx.lineWidth = 30;
-                // ctx.stroke();
-            } else {
-                tech.isHarmMACHO = false;
             }
-            //draw outline
-            ctx.beginPath();
-            ctx.arc(this.position.x, this.position.y, this.radius + 15, 0, 2 * Math.PI);
-            ctx.strokeStyle = "#000"
-            ctx.lineWidth = 1;
-            ctx.stroke();
         }
     },
     WIMP(x = level.exit.x + tech.wimpCount * 200 * (Math.random() - 0.5), y = level.exit.y + tech.wimpCount * 200 * (Math.random() - 0.5)) { //immortal mob that follows player //if you have the tech it spawns at start of every level at the exit
@@ -294,7 +296,7 @@ const spawn = {
         me.showHealthBar = false;
         me.collisionFilter.category = 0;
         me.collisionFilter.mask = 0; //cat.player //| cat.body
-        me.chaseSpeed = 1 + 2 * Math.random()
+        me.chaseSpeed = 1.2 + 2 * Math.random()
 
         me.awake = function() {
             //chase player
@@ -338,7 +340,7 @@ const spawn = {
                 }
                 setTimeout(() => {
                     this.do = this.awake;
-                }, 500 + 2000 * Math.random());
+                }, 1000 * Math.random());
             }
             this.checkStatus();
         };
@@ -741,7 +743,7 @@ const spawn = {
             vertexCollision(where, look, body);
             if (!m.isCloak) vertexCollision(where, look, [playerBody, playerHead]);
             if (best.who && (best.who === playerBody || best.who === playerHead) && m.immuneCycle < m.cycle) {
-                if (m.immuneCycle < m.cycle + 60 + tech.collisionImmuneCycles) m.immuneCycle = m.cycle + 60 + tech.collisionImmuneCycles; //player is immune to damage extra time
+                if (m.immuneCycle < m.cycle + 60 + m.collisionImmuneCycles) m.immuneCycle = m.cycle + 60 + m.collisionImmuneCycles; //player is immune to damage extra time
                 m.damage(dmg);
                 simulation.drawList.push({ //add dmg to draw queue
                     x: best.x,
@@ -1296,7 +1298,7 @@ const spawn = {
         // Matter.Body.setDensity(me, 0.001); //normal is 0.001
         me.collisionFilter.mask = cat.bullet | cat.player | cat.body | cat.map
         me.memory = Infinity;
-        me.seePlayerFreq = 20
+        me.seePlayerFreq = 17
         me.lockedOn = null;
         if (vertices === 9) {
             //on primary spawn
@@ -1359,7 +1361,7 @@ const spawn = {
                     y: 0
                 })
             }
-            this.seePlayerByHistory();
+            this.seePlayerByHistory(50);
             this.attraction();
             this.checkStatus();
         };
@@ -1577,8 +1579,8 @@ const spawn = {
     hopper(x, y, radius = 30 + Math.ceil(Math.random() * 30)) {
         mobs.spawn(x, y, 5, radius, "rgb(0,200,180)");
         let me = mob[mob.length - 1];
-        me.accelMag = 0.04;
-        me.g = 0.0017; //required if using this.gravity
+        me.accelMag = 0.05;
+        me.g = 0.0032; //required if using this.gravity
         me.frictionAir = 0.01;
         me.friction = 1
         me.frictionStatic = 1
@@ -1598,7 +1600,7 @@ const spawn = {
                     const forceMag = (this.accelMag + this.accelMag * Math.random()) * this.mass;
                     const angle = Math.atan2(this.seePlayer.position.y - this.position.y, this.seePlayer.position.x - this.position.x);
                     this.force.x += forceMag * Math.cos(angle);
-                    this.force.y += forceMag * Math.sin(angle) - (Math.random() * 0.07 + 0.06) * this.mass; //antigravity
+                    this.force.y += forceMag * Math.sin(angle) - (Math.random() * 0.06 + 0.1) * this.mass; //antigravity
                 }
             } else {
                 //randomly hob if not aware of player
@@ -1609,7 +1611,7 @@ const spawn = {
                     const forceMag = (this.accelMag + this.accelMag * Math.random()) * this.mass * (0.1 + Math.random() * 0.3);
                     const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI;
                     this.force.x += forceMag * Math.cos(angle);
-                    this.force.y += forceMag * Math.sin(angle) - 0.05 * this.mass; //antigravity
+                    this.force.y += forceMag * Math.sin(angle) - 0.07 * this.mass; //antigravity
                 }
             }
         };
@@ -1637,7 +1639,7 @@ const spawn = {
         me.collisionFilter.category = cat.mobBullet;
         me.collisionFilter.mask = cat.player | cat.map | cat.body | cat.bullet;
         me.onHit = function() {
-            this.explode(this.mass * 2);
+            this.explode(this.mass);
         };
         me.do = function() {
             this.gravity();
@@ -2007,7 +2009,7 @@ const spawn = {
             this.checkStatus();
             if (this.seePlayer.recall) {
                 //throw large seekers
-                if (!(simulation.cycle % 240)) {
+                if (!(simulation.cycle % 90)) {
                     spawn.seeker(this.position.x, this.position.y, 15 * (0.7 + 0.5 * Math.random()), 7); //give the bullet a rotational velocity as if they were attached to a vertex
                     const who = mob[mob.length - 1]
                     Matter.Body.setDensity(who, 0.00001); //normal is 0.001
@@ -2557,7 +2559,6 @@ const spawn = {
         };
         me.warpIntensity = 0
         me.awake = function() {
-            // this.armor();
             this.checkStatus();
             //health bar needs to be here because the position is being set
             const h = this.radius * 0.3;
@@ -2625,14 +2626,6 @@ const spawn = {
                 ctx.stroke();
             }
 
-            // ctx.beginPath();
-            // ctx.arc(this.position.x, this.position.y, this.laserRange * 0.9, 0, 2 * Math.PI);
-            // ctx.strokeStyle = "rgba(150,0,255,0.5)";
-            // ctx.lineWidth = 1;
-            // ctx.stroke();
-            // ctx.setLineDash([]);
-            // ctx.fillStyle = "rgba(150,0,255,0.03)";
-            // ctx.fill();
             if (!this.isStunned && !this.isSlowed) {
                 if (this.followDelay > this.delayLimit) this.followDelay -= 0.15;
                 let history = m.history[(m.cycle - Math.floor(this.followDelay)) % 600]
@@ -2717,14 +2710,13 @@ const spawn = {
     flutter(x, y, radius = 20 + 6 * Math.random()) {
         mobs.spawn(x, y, 7, radius, '#16576b');
         let me = mob[mob.length - 1];
-        me.isBoss = true;
         Matter.Body.setDensity(me, 0.002); //extra dense //normal is 0.001 //makes effective life much larger
         // me.damageReduction = 0.04 / (tech.isScaleMobsWithDuplication ? 1 + tech.duplicationChance() : 1)
 
         me.vertices = Matter.Vertices.rotate(me.vertices, Math.PI, me.position); //make the pointy side of triangle the front
         Matter.Body.rotate(me, Math.random() * Math.PI * 2);
         me.accelMag = 0.0006 + 0.0007 * Math.sqrt(simulation.accelScale);
-        me.frictionAir = 0.05;
+        me.frictionAir = 0.04;
         // me.seePlayerFreq = 40 + Math.floor(13 * Math.random())
         me.memory = 240;
         me.restitution = 1;
@@ -2761,7 +2753,7 @@ const spawn = {
                 const angle = this.angle + Math.PI / 2;
                 c = Math.cos(angle) * this.fireDir.x + Math.sin(angle) * this.fireDir.y;
                 const threshold = 0.4;
-                const turn = 0.00003 * this.inertia
+                const turn = 0.000025 * this.inertia
                 if (c > threshold) {
                     this.torque += turn;
                 } else if (c < -threshold) {
@@ -2793,7 +2785,7 @@ const spawn = {
         Matter.Body.rotate(me, Math.random() * Math.PI * 2);
         me.accelMag = 0.00045 + 0.0005 * Math.sqrt(simulation.accelScale);
         me.frictionAir = 0.05;
-        me.seePlayerFreq = 20
+        me.seePlayerFreq = 13
         me.memory = 420;
         me.restitution = 1;
         me.frictionStatic = 0;
@@ -2902,7 +2894,7 @@ const spawn = {
             }
         };
         me.do = function() {
-            this.seePlayerByHistory()
+            this.seePlayerByHistory(50)
             this.checkStatus();
             if (this.isInvulnerable) {
                 this.invulnerableCount--
@@ -3158,7 +3150,7 @@ const spawn = {
             // //check damage
             // const hitPlayer = Matter.Query.ray([player], this.position, wing, radius)
             // if (hitPlayer.length && m.immuneCycle < m.cycle) {
-            //     m.immuneCycle = m.cycle + tech.collisionImmuneCycles; //player is immune to damage
+            //     m.immuneCycle = m.cycle + m.collisionImmuneCycles; //player is immune to damage
             //     m.damage(0.02 * simulation.dmgScale);
             // }
 
@@ -3329,7 +3321,7 @@ const spawn = {
         }
         me.do = function() {
             // this.armor();
-            this.seePlayerByHistory()
+            this.seePlayerByHistory(40)
             if (this.nextBlinkCycle < simulation.cycle && this.seePlayer.yes) { //teleport towards the player
                 this.nextBlinkCycle = simulation.cycle + this.delay;
                 const dist = Vector.sub(this.seePlayer.position, this.position);
@@ -3409,7 +3401,7 @@ const spawn = {
                         }
                         //damage player if in range
                         if (Vector.magnitude(Vector.sub(player.position, this.fireTarget)) < this.pulseRadius && m.immuneCycle < m.cycle) {
-                            m.immuneCycle = m.cycle + tech.collisionImmuneCycles; //player is immune to damage
+                            m.immuneCycle = m.cycle + m.collisionImmuneCycles; //player is immune to damage
                             m.damage(0.045 * simulation.dmgScale);
                         }
                         simulation.drawList.push({ //add dmg to draw queue
@@ -3530,7 +3522,7 @@ const spawn = {
                         }
                         //damage player if in range
                         if (Vector.magnitude(Vector.sub(player.position, this.fireTarget)) < this.pulseRadius && m.immuneCycle < m.cycle) {
-                            m.immuneCycle = m.cycle + tech.collisionImmuneCycles; //player is immune to damage
+                            m.immuneCycle = m.cycle + m.collisionImmuneCycles; //player is immune to damage
                             m.damage(0.03 * simulation.dmgScale);
                         }
                         simulation.drawList.push({ //add dmg to draw queue
@@ -3602,21 +3594,116 @@ const spawn = {
         };
     },
     laser(x, y, radius = 30) {
-        mobs.spawn(x, y, 3, radius, "#f00");
+        const color = "#f00"
+        mobs.spawn(x, y, 3, radius, color);
         let me = mob[mob.length - 1];
         me.vertices = Matter.Vertices.rotate(me.vertices, Math.PI, me.position); //make the pointy side of triangle the front
         Matter.Body.rotate(me, Math.random() * Math.PI * 2);
         me.accelMag = 0.0001 * simulation.accelScale;
+        me.laserInterval = 100
         me.onHit = function() {
             //run this function on hitting player
             this.explode();
         };
         me.do = function() {
+            this.torque = this.lookTorque * this.inertia * 0.5;
             this.seePlayerByLookingAt();
             this.checkStatus();
             this.attraction();
-            this.laser();
-            this.torque = this.lookTorque * this.inertia * 0.5;
+            if (this.seePlayer.recall) {
+                //set direction to turn to fire
+                if (!(simulation.cycle % this.seePlayerFreq)) this.fireDir = Vector.normalise(Vector.sub(this.seePlayer.position, this.position));
+
+                if (simulation.cycle % this.laserInterval > this.laserInterval / 2) {
+                    const vertexCollision = function(v1, v1End, domain) {
+                        for (let i = 0; i < domain.length; ++i) {
+                            let vertices = domain[i].vertices;
+                            const len = vertices.length - 1;
+                            for (let j = 0; j < len; j++) {
+                                results = simulation.checkLineIntersection(v1, v1End, vertices[j], vertices[j + 1]);
+                                if (results.onLine1 && results.onLine2) {
+                                    const dx = v1.x - results.x;
+                                    const dy = v1.y - results.y;
+                                    const dist2 = dx * dx + dy * dy;
+                                    if (dist2 < best.dist2 && (!domain[i].mob || domain[i].alive)) {
+                                        best = {
+                                            x: results.x,
+                                            y: results.y,
+                                            dist2: dist2,
+                                            who: domain[i],
+                                            v1: vertices[j],
+                                            v2: vertices[j + 1]
+                                        };
+                                    }
+                                }
+                            }
+                            results = simulation.checkLineIntersection(v1, v1End, vertices[0], vertices[len]);
+                            if (results.onLine1 && results.onLine2) {
+                                const dx = v1.x - results.x;
+                                const dy = v1.y - results.y;
+                                const dist2 = dx * dx + dy * dy;
+                                if (dist2 < best.dist2) {
+                                    best = {
+                                        x: results.x,
+                                        y: results.y,
+                                        dist2: dist2,
+                                        who: domain[i],
+                                        v1: vertices[0],
+                                        v2: vertices[len]
+                                    };
+                                }
+                            }
+                        }
+                    };
+                    const seeRange = 8000;
+                    best = {
+                        x: null,
+                        y: null,
+                        dist2: Infinity,
+                        who: null,
+                        v1: null,
+                        v2: null
+                    };
+                    const look = {
+                        x: this.position.x + seeRange * Math.cos(this.angle),
+                        y: this.position.y + seeRange * Math.sin(this.angle)
+                    };
+                    vertexCollision(this.position, look, map);
+                    vertexCollision(this.position, look, body);
+                    if (!m.isCloak) vertexCollision(this.position, look, [playerBody, playerHead]);
+
+                    // hitting player
+                    if ((best.who === playerBody || best.who === playerHead) && m.immuneCycle < m.cycle) {
+                        const dmg = 0.003 * simulation.dmgScale;
+                        m.damage(dmg);
+                        //draw damage
+                        ctx.fillStyle = color;
+                        ctx.beginPath();
+                        ctx.arc(best.x, best.y, dmg * 1500, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+                    //draw beam
+                    if (best.dist2 === Infinity) best = look;
+                    ctx.beginPath();
+                    ctx.moveTo(this.vertices[1].x, this.vertices[1].y);
+                    ctx.lineTo(best.x, best.y);
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 3;
+                    ctx.setLineDash([50 + 120 * Math.random(), 50 * Math.random()]);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    ctx.beginPath();
+                    ctx.arc(this.vertices[1].x, this.vertices[1].y, 1 + 0.3 * (this.laserInterval - simulation.cycle % this.laserInterval), 0, 2 * Math.PI); //* this.fireCycle / this.fireDelay
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(this.vertices[1].x, this.vertices[1].y, 1 + 0.3 * (simulation.cycle % this.laserInterval), 0, 2 * Math.PI); //* this.fireCycle / this.fireDelay
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                }
+            }
         };
     },
     laserBoss(x, y, radius = 30) {
@@ -3745,7 +3832,7 @@ const spawn = {
             vertexCollision(where, look, body);
             if (!m.isCloak) vertexCollision(where, look, [playerBody, playerHead]);
             if (best.who && (best.who === playerBody || best.who === playerHead) && m.immuneCycle < m.cycle) {
-                m.immuneCycle = m.cycle + tech.collisionImmuneCycles + 60; //player is immune to damage for an extra second
+                m.immuneCycle = m.cycle + m.collisionImmuneCycles + 60; //player is immune to damage for an extra second
                 const dmg = 0.14 * simulation.dmgScale;
                 m.damage(dmg);
                 simulation.drawList.push({ //add dmg to draw queue
@@ -3997,7 +4084,7 @@ const spawn = {
             vertexCollision(where, look, map);
             if (!m.isCloak) vertexCollision(where, look, [playerBody, playerHead]);
             if (best.who && (best.who === playerBody || best.who === playerHead) && m.immuneCycle < m.cycle) {
-                m.immuneCycle = m.cycle + tech.collisionImmuneCycles; //player is immune to damage for an extra second
+                m.immuneCycle = m.cycle + m.collisionImmuneCycles; //player is immune to damage for an extra second
                 m.damage(this.swordDamage);
                 simulation.drawList.push({ //add dmg to draw queue
                     x: best.x,
@@ -4111,8 +4198,8 @@ const spawn = {
                 if (this.phaseCycle > -1) {
                     Matter.Body.rotate(this, 0.02)
                     for (let i = 0, len = this.vertices.length; i < len; i++) { //fire a bullet from each vertex
-                        spawn.sniperBullet(this.vertices[i].x, this.vertices[i].y, 6, 4);
-                        const velocity = Vector.mult(Vector.normalise(Vector.sub(this.position, this.vertices[i])), -17)
+                        spawn.sniperBullet(this.vertices[i].x, this.vertices[i].y, 5, 4);
+                        const velocity = Vector.mult(Vector.normalise(Vector.sub(this.position, this.vertices[i])), -15)
                         Matter.Body.setVelocity(mob[mob.length - 1], {
                             x: velocity.x,
                             y: velocity.y
@@ -4259,8 +4346,8 @@ const spawn = {
                     this.death();
                     //hit player
                     if (Vector.magnitude(Vector.sub(this.position, player.position)) < this.explodeRange && m.immuneCycle < m.cycle) {
-                        m.damage(0.015 * simulation.dmgScale * (tech.isRadioactiveResistance ? 0.25 : 1));
-                        m.energy -= 0.15 * (tech.isRadioactiveResistance ? 0.25 : 1)
+                        m.damage(0.02 * simulation.dmgScale * (tech.isRadioactiveResistance ? 0.25 : 1));
+                        m.energy -= 0.2 * (tech.isRadioactiveResistance ? 0.25 : 1)
                         if (m.energy < 0) m.energy = 0
                     }
                     // mob[i].isInvulnerable = false //make mineBoss not invulnerable ?
@@ -4424,13 +4511,13 @@ const spawn = {
                 }
                 //time dilation
                 if (!simulation.isTimeSkipping) {
-                    // requestAnimationFrame(() => {
-                    //     simulation.timePlayerSkip(2)
-                    //     m.walk_cycle += m.flipLegs * m.Vx //makes the legs look like they are moving fast
-                    // }); //wrapping in animation frame prevents errors, probably            
+                    requestAnimationFrame(() => {
+                        simulation.timePlayerSkip(2)
+                        m.walk_cycle += m.flipLegs * m.Vx //makes the legs look like they are moving fast
+                    }); //wrapping in animation frame prevents errors, probably            
 
-                    simulation.timePlayerSkip(2)
-                    m.walk_cycle += m.flipLegs * m.Vx //makes the legs look like they are moving fast
+                    // simulation.timePlayerSkip(2)
+                    // m.walk_cycle += m.flipLegs * m.Vx //makes the legs look like they are moving fast
 
                     //draw invulnerable
                     ctx.beginPath();
@@ -4516,7 +4603,7 @@ const spawn = {
             powerUps.spawnBossPowerUp(this.position.x, this.position.y)
         };
         me.do = function() {
-            this.seePlayerByHistory();
+            this.seePlayerByHistory(40);
             this.attraction();
             this.checkStatus();
             this.sword() //does various things depending on what stage of the sword swing
@@ -4623,7 +4710,7 @@ const spawn = {
             vertexCollision(where, look, map);
             if (!m.isCloak) vertexCollision(where, look, [playerBody, playerHead]);
             if (best.who && (best.who === playerBody || best.who === playerHead) && m.immuneCycle < m.cycle) {
-                m.immuneCycle = m.cycle + tech.collisionImmuneCycles + 60; //player is immune to damage for an extra second
+                m.immuneCycle = m.cycle + m.collisionImmuneCycles + 60; //player is immune to damage for an extra second
                 m.damage(this.swordDamage);
                 simulation.drawList.push({ //add dmg to draw queue
                     x: best.x,
@@ -4747,7 +4834,7 @@ const spawn = {
             vertexCollision(where, look, map);
             if (!m.isCloak) vertexCollision(where, look, [playerBody, playerHead]);
             if (best.who && (best.who === playerBody || best.who === playerHead) && m.immuneCycle < m.cycle) {
-                m.immuneCycle = m.cycle + tech.collisionImmuneCycles + 60; //player is immune to damage for an extra second
+                m.immuneCycle = m.cycle + m.collisionImmuneCycles + 60; //player is immune to damage for an extra second
                 m.damage(this.swordDamage);
                 simulation.drawList.push({ //add dmg to draw queue
                     x: best.x,
@@ -4782,6 +4869,7 @@ const spawn = {
         me.alpha = 1; //used in drawSneaker
         // me.leaveBody = false;
         me.canTouchPlayer = false; //used in drawSneaker
+        me.isBadTarget = true;
         me.collisionFilter.mask = cat.map | cat.body | cat.bullet | cat.mob //can't touch player
         me.showHealthBar = false;
         me.memory = 240;
@@ -4801,6 +4889,7 @@ const spawn = {
                     this.healthBar();
                     if (!this.canTouchPlayer) {
                         this.canTouchPlayer = true;
+                        this.isBadTarget = false;
                         this.collisionFilter.mask = cat.player | cat.map | cat.body | cat.bullet | cat.mob; //can touch player
                     }
                 }
@@ -4816,6 +4905,7 @@ const spawn = {
                 ctx.fill();
             } else if (this.canTouchPlayer) { //stealth
                 this.canTouchPlayer = false;
+                this.isBadTarget = true;
                 this.collisionFilter.mask = cat.map | cat.body | cat.bullet | cat.mob //can't touch player
             }
         };
@@ -4830,6 +4920,7 @@ const spawn = {
         me.stroke = "transparent"; //used for drawGhost
         me.alpha = 1; //used in drawGhost
         me.canTouchPlayer = false; //used in drawGhost
+        me.isBadTarget = true;
         // me.leaveBody = false;
         me.collisionFilter.mask = cat.bullet //| cat.body
         me.showHealthBar = false;
@@ -4857,6 +4948,7 @@ const spawn = {
                     this.healthBar();
                     if (!this.canTouchPlayer) {
                         this.canTouchPlayer = true;
+                        this.isBadTarget = false;
                         this.collisionFilter.mask = cat.player | cat.bullet
                     }
                 }
@@ -4873,6 +4965,7 @@ const spawn = {
                 ctx.fill();
             } else if (this.canTouchPlayer) {
                 this.canTouchPlayer = false;
+                this.isBadTarget = true;
                 this.collisionFilter.mask = cat.bullet; //can't touch player or walls
             }
         };
@@ -5014,13 +5107,13 @@ const spawn = {
         }, 2000); //add in a delay in case the level gets flipped left right
 
         me.isBoss = true;
-        Matter.Body.setDensity(me, 0.01 + 0.0003 * Math.sqrt(simulation.difficulty)); //extra dense //normal is 0.001 //makes effective life much larger
+        Matter.Body.setDensity(me, 0.01 + 0.0004 * Math.sqrt(simulation.difficulty)); //extra dense //normal is 0.001 //makes effective life much larger
         me.damageReduction = 0.2 / (tech.isScaleMobsWithDuplication ? 1 + tech.duplicationChance() : 1)
 
         me.vertices = Matter.Vertices.rotate(me.vertices, Math.PI, me.position); //make the pointy side of triangle the front
         me.isVerticesChange = true
         me.memory = 240;
-        me.fireFreq = 0.025;
+        me.fireFreq = 0.009 + 0.0004 * Math.min(40, simulation.difficulty); //bigger number means more shots per second
         me.noseLength = 0;
         me.fireAngle = 0;
         me.accelMag = 0.005 * simulation.accelScale;
@@ -5038,11 +5131,50 @@ const spawn = {
             // this.armor();
             this.seePlayerByLookingAt();
             this.checkStatus();
-            this.fire();
-            //gently return to starting location
-            // const sub = Vector.sub(this.homePosition, this.position)
-            // const dist = Vector.magnitude(sub)
-            // if (dist > 50) this.force = Vector.mult(Vector.normalise(sub), this.mass * 0.0002)
+            // this.fire();
+            const setNoseShape = () => {
+                const mag = this.radius + this.radius * this.noseLength;
+                this.vertices[1].x = this.position.x + Math.cos(this.angle) * mag;
+                this.vertices[1].y = this.position.y + Math.sin(this.angle) * mag;
+            };
+            //throw a mob/bullet at player
+            if (this.seePlayer.recall) {
+                //set direction to turn to fire
+                if (!(simulation.cycle % this.seePlayerFreq)) {
+                    this.fireDir = Vector.normalise(Vector.sub(this.seePlayer.position, this.position));
+                    this.fireDir.y -= Math.abs(this.seePlayer.position.x - this.position.x) / 2500; //gives the bullet an arc  //was    / 1600
+                }
+                //rotate towards fireAngle
+                const angle = this.angle + Math.PI / 2;
+                const dot = Vector.dot({
+                    x: Math.cos(angle),
+                    y: Math.sin(angle)
+                }, this.fireDir)
+                // c = Math.cos(angle) * this.fireDir.x + Math.sin(angle) * this.fireDir.y;
+                const threshold = 0.1;
+                if (dot > threshold) {
+                    this.torque += 0.000004 * this.inertia;
+                } else if (dot < -threshold) {
+                    this.torque -= 0.000004 * this.inertia;
+                } else if (this.noseLength > 1.5 && dot > -0.2 && dot < 0.2) {
+                    //fire
+                    for (let i = 0, len = 2 + 0.07 * simulation.difficulty; i < len; i++) {
+                        spawn.bullet(this.vertices[1].x, this.vertices[1].y, 7 + Math.ceil(this.radius / 25));
+                        const spread = Vector.rotate({
+                            x: Math.sqrt(len) + 4,
+                            y: 0
+                        }, 2 * Math.PI * Math.random())
+                        const dir = Vector.add(Vector.mult(this.fireDir, 15), spread)
+                        Matter.Body.setVelocity(mob[mob.length - 1], dir);
+                    }
+                    this.noseLength = 0;
+                }
+                if (this.noseLength < 1.5) this.noseLength += this.fireFreq;
+                setNoseShape();
+            } else if (this.noseLength > 0.1) {
+                this.noseLength -= this.fireFreq / 2;
+                setNoseShape();
+            }
         };
     },
     bullet(x, y, radius = 9, sides = 0) {
@@ -5051,10 +5183,10 @@ const spawn = {
         let me = mob[mob.length - 1];
         me.stroke = "transparent";
         me.onHit = function() {
-            this.explode(this.mass * 20);
+            this.explode(this.mass * 15);
         };
         Matter.Body.setDensity(me, 0.00004); //normal is 0.001
-        me.timeLeft = 200;
+        me.timeLeft = 220;
         me.g = 0.001; //required if using this.gravity 
         me.frictionAir = 0;
         me.restitution = 0.8;
@@ -5134,10 +5266,11 @@ const spawn = {
         me.frictionStatic = 0;
         me.friction = 0;
         me.canTouchPlayer = false; //used in drawSneaker
+        me.isBadTarget = true;
         me.collisionFilter.mask = cat.map | cat.body | cat.bullet | cat.mob //can't touch player
 
-        me.memory = 60 //140;
-        me.fireFreq = 0.006 + Math.random() * 0.002;
+        me.memory = 30 //140;
+        me.fireFreq = 0.005 + Math.random() * 0.002 + 0.0005 * simulation.difficulty; //larger = fire more often
         me.noseLength = 0;
         me.fireAngle = 0;
         me.accelMag = 0.0005 * simulation.accelScale;
@@ -5183,8 +5316,8 @@ const spawn = {
                     this.torque -= 0.000004 * this.inertia;
                 } else if (this.noseLength > 1.5 && dot > -0.2 && dot < 0.2) {
                     //fire
-                    spawn.sniperBullet(this.vertices[1].x, this.vertices[1].y, 7 + Math.ceil(this.radius / 15), 4);
-                    const v = 10 + 15 * simulation.accelScale;
+                    spawn.sniperBullet(this.vertices[1].x, this.vertices[1].y, 7 + Math.ceil(this.radius / 15), 5);
+                    const v = 10 + 8 * simulation.accelScale;
                     Matter.Body.setVelocity(mob[mob.length - 1], {
                         x: this.velocity.x + this.fireDir.x * v + Math.random(),
                         y: this.velocity.y + this.fireDir.y * v + Math.random()
@@ -5216,6 +5349,7 @@ const spawn = {
                     this.healthBar();
                     if (!this.canTouchPlayer) {
                         this.canTouchPlayer = true;
+                        this.isBadTarget = false;
                         this.collisionFilter.mask = cat.player | cat.map | cat.body | cat.bullet | cat.mob; //can touch player
                     }
                 }
@@ -5231,11 +5365,12 @@ const spawn = {
                 ctx.fill();
             } else if (this.canTouchPlayer) {
                 this.canTouchPlayer = false;
+                this.isBadTarget = true
                 this.collisionFilter.mask = cat.map | cat.body | cat.bullet | cat.mob //can't touch player
             }
         };
     },
-    sniperBullet(x, y, radius = 9, sides = 4) { //bullets
+    sniperBullet(x, y, radius = 9, sides = 5) { //bullets
         mobs.spawn(x, y, sides, radius, "rgb(255,0,155)");
         let me = mob[mob.length - 1];
         me.stroke = "transparent";
@@ -5378,6 +5513,163 @@ const spawn = {
             }
         };
     },
+    // blowSuckBoss(x, y, radius = 80) {
+    //     mobs.spawn(x, y, 10, radius, "transparent");
+    //     let me = mob[mob.length - 1];
+    //     me.isBoss = true;
+    //     Matter.Body.setDensity(me, 0.0022 + 0.0002 * Math.sqrt(simulation.difficulty)); //extra dense //normal is 0.001 //makes effective life much larger
+    //     me.damageReduction = 0.2 / (tech.isScaleMobsWithDuplication ? 1 + tech.duplicationChance() : 1)
+
+    //     me.fireFreq = Math.floor(60 * simulation.CDScale)
+    //     me.seePlayerFreq = 15
+    //     me.seeAtDistance2 = 300000;
+    //     me.accelMag = 0.0003 * simulation.accelScale;
+    //     if (map.length) me.searchTarget = map[Math.floor(Math.random() * (map.length - 1))].position; //required for search
+    //     // Matter.Body.setDensity(me, 0.001); //normal is 0.001 //makes effective life much lower
+    //     me.stroke = "transparent"; //used for drawGhost
+    //     me.alpha = 1; //used in drawGhost
+    //     me.canTouchPlayer = false; //used in drawGhost
+    //     me.isBadTarget = true;
+    //     // me.leaveBody = false;
+    //     me.collisionFilter.mask = cat.bullet //| cat.body
+    //     me.showHealthBar = false;
+    //     me.memory = 480;
+    //     me.onDeath = function() {
+    //         powerUps.spawnBossPowerUp(this.position.x, this.position.y)
+    //     };
+    //     me.onDamage = function() {};
+    //     me.suck = function() {
+    //         for (let i = 0; i < mob.length; i++) {
+    //             if (mob[i].isBlowSuckBullet) {
+    //                 const unit = Vector.normalise(Vector.sub(this.position, mob[i].position))
+    //                 const mag = Vector.mult(unit, 0.0008 * mob[i].mass)
+    //                 mob[i].force.x += mag.x
+    //                 mob[i].force.y += mag.y
+    //             }
+    //         }
+    //     }
+    //     me.do = function() {
+    //         //cap max speed
+    //         if (this.speed > 8) {
+    //             Matter.Body.setVelocity(this, {
+    //                 x: this.velocity.x * 0.8,
+    //                 y: this.velocity.y * 0.8
+    //             });
+    //         }
+    //         this.seePlayerCheckByDistance();
+    //         this.checkStatus();
+    //         this.attraction();
+    //         this.search();
+    //         //draw
+    //         if (this.distanceToPlayer2() < this.seeAtDistance2) {
+    //             if (this.alpha < 1) this.alpha += 0.005 * simulation.CDScale; //near player go solid
+    //         } else {
+    //             if (this.alpha > 0) this.alpha -= 0.05; ///away from player, hide
+    //         }
+    //         if (this.alpha > 0) {
+    //             if (this.alpha > 0.8 && this.seePlayer.recall) {
+    //                 this.healthBar();
+    //                 if (!this.canTouchPlayer) {
+    //                     this.canTouchPlayer = true;
+    //                     this.isBadTarget = false;
+    //                     this.collisionFilter.mask = cat.player | cat.bullet
+    //                 }
+    //             }
+    //             //draw body
+    //             ctx.beginPath();
+    //             const vertices = this.vertices;
+    //             ctx.moveTo(vertices[0].x, vertices[0].y);
+    //             for (let j = 1, len = vertices.length; j < len; ++j) {
+    //                 ctx.lineTo(vertices[j].x, vertices[j].y);
+    //             }
+    //             ctx.lineTo(vertices[0].x, vertices[0].y);
+    //             ctx.lineWidth = 1;
+    //             ctx.fillStyle = `rgba(255,255,255,${this.alpha * this.alpha})`;
+    //             ctx.fill();
+
+
+    //             this.suck();
+    //             if (this.seePlayer.recall && !(simulation.cycle % this.fireFreq)) {
+    //                 this.suckCount = 0;
+    //                 Matter.Body.setAngularVelocity(this, 0.11)
+    //                 //fire a bullet from each vertex
+    //                 for (let i = 0, len = this.vertices.length; i < len; i++) {
+    //                     spawn.bounceBullet(this.vertices[i].x, this.vertices[i].y, 8)
+    //                     //give the bullet a rotational velocity as if they were attached to a vertex
+    //                     const velocity = Vector.mult(Vector.perp(Vector.normalise(Vector.sub(this.position, this.vertices[i]))), -16)
+    //                     const who = mob[mob.length - 1]
+    //                     who.isBlowSuckBullet = true
+    //                     Matter.Body.setVelocity(who, {
+    //                         x: this.velocity.x + velocity.x,
+    //                         y: this.velocity.y + velocity.y
+    //                     });
+    //                 }
+    //             }
+
+
+    //         } else if (this.canTouchPlayer) {
+    //             this.canTouchPlayer = false;
+    //             this.isBadTarget = true;
+    //             this.collisionFilter.mask = cat.bullet; //can't touch player or walls
+    //         }
+    //     };
+    // },
+    // blowSuckBoss(x, y, radius = 80, isSpawnBossPowerUp = true) {
+    //     mobs.spawn(x, y, 10, radius, "transparent"); //rgb(60,60,85)
+    //     let me = mob[mob.length - 1];
+    //     me.isBoss = true;
+    //     Matter.Body.setDensity(me, 0.0022 + 0.0002 * Math.sqrt(simulation.difficulty)); //extra dense //normal is 0.001 //makes effective life much larger
+    //     me.damageReduction = 0.2 / (tech.isScaleMobsWithDuplication ? 1 + tech.duplicationChance() : 1)
+
+    //     me.accelMag = 0.0001 * simulation.accelScale;
+    //     me.fireFreq = Math.floor(180 * simulation.CDScale)
+    //     me.frictionStatic = 0;
+    //     me.friction = 0;
+    //     me.frictionAir = 0.005;
+    //     me.memory = 420;
+    //     me.repulsionRange = 1000000; //squared
+    //     // spawn.shield(me, x, y, 1);
+    //     // spawn.spawnOrbitals(me, radius + 50 + 200 * Math.random())
+
+    //     me.onDeath = function() {
+    //         if (isSpawnBossPowerUp) powerUps.spawnBossPowerUp(this.position.x, this.position.y)
+    //     };
+    //     me.onDamage = function() {};
+    //     me.suck = function() {
+    //         for (let i = 0; i < mob.length; i++) {
+    //             if (mob[i].isBlowSuckBullet) {
+    //                 const unit = Vector.normalise(Vector.sub(this.position, mob[i].position))
+    //                 const mag = Vector.mult(unit, 0.0008 * mob[i].mass)
+    //                 mob[i].force.x += mag.x
+    //                 mob[i].force.y += mag.y
+    //             }
+    //         }
+    //     }
+    //     me.do = function() {
+    //         this.seePlayerCheck();
+    //         this.checkStatus();
+    //         this.attraction();
+    //         // this.repulsion();
+    //         this.suck();
+
+    //         if (this.seePlayer.recall && !(simulation.cycle % this.fireFreq)) {
+    //             this.suckCount = 0;
+    //             Matter.Body.setAngularVelocity(this, 0.11)
+    //             //fire a bullet from each vertex
+    //             for (let i = 0, len = this.vertices.length; i < len; i++) {
+    //                 spawn.bounceBullet(this.vertices[i].x, this.vertices[i].y, 8)
+    //                 //give the bullet a rotational velocity as if they were attached to a vertex
+    //                 const velocity = Vector.mult(Vector.perp(Vector.normalise(Vector.sub(this.position, this.vertices[i]))), -16)
+    //                 const who = mob[mob.length - 1]
+    //                 who.isBlowSuckBullet = true
+    //                 Matter.Body.setVelocity(who, {
+    //                     x: this.velocity.x + velocity.x,
+    //                     y: this.velocity.y + velocity.y
+    //                 });
+    //             }
+    //         }
+    //     };
+    // },
     grenadierBoss(x, y, radius = 95) {
         mobs.spawn(x, y, 6, radius, "rgb(0,235,255)");
         let me = mob[mob.length - 1];
@@ -5529,7 +5821,7 @@ const spawn = {
         me.onDeath = function() {
             //damage player if in range
             if (Vector.magnitude(Vector.sub(player.position, this.position)) < pulseRadius && m.immuneCycle < m.cycle) {
-                m.immuneCycle = m.cycle + tech.collisionImmuneCycles; //player is immune to damage
+                m.immuneCycle = m.cycle + m.collisionImmuneCycles; //player is immune to damage
                 m.damage(0.015 * simulation.dmgScale);
             }
             simulation.drawList.push({ //add dmg to draw queue
@@ -5650,7 +5942,7 @@ const spawn = {
             // spawn.seeker(where.x, where.y); //give the bullet a rotational velocity as if they were attached to a vertex
         };
         me.do = function() {
-            this.seePlayerByHistory();
+            this.seePlayerByHistory(60);
             this.attraction();
             this.checkStatus();
             this.eventHorizon = 900 + 200 * Math.sin(simulation.cycle * 0.005)
@@ -5664,12 +5956,14 @@ const spawn = {
                     //     // simulation.loop(); //ending with a wipe and normal loop fixes some very minor graphical issues where things are draw in the wrong locations
                     // }); //wrapping in animation frame prevents errors, probably
 
-                    // requestAnimationFrame(() => {
+                    // 
                     //     simulation.timePlayerSkip(1)
                     //     m.walk_cycle += m.flipLegs * m.Vx //makes the legs look like they are moving fast
                     // }); //wrapping in animation frame prevents errors, probably            
+                    requestAnimationFrame(() => {
+                        simulation.timePlayerSkip(1)
+                    }); //wrapping in animation frame prevents errors, probably            
 
-                    simulation.timePlayerSkip(1)
                     m.walk_cycle += m.flipLegs * m.Vx //makes the legs look like they are moving fast
 
                     ctx.beginPath();
@@ -5916,19 +6210,19 @@ const spawn = {
         };
     },
     snakeSpitBoss(x, y, radius = 50) {
-        const nodes = Math.min(8 + Math.ceil(0.5 * simulation.difficulty), 40)
         let angle = Math.PI
-        let mag = 300
+        const tailRadius = 300
 
         const color1 = "rgb(235,180,255)"
-        mobs.spawn(x + mag * Math.cos(angle), y + mag * Math.sin(angle), 8, radius, color1); //"rgb(55,170,170)"
+        mobs.spawn(x + tailRadius * Math.cos(angle), y + tailRadius * Math.sin(angle), 8, radius, color1); //"rgb(55,170,170)"
         let me = mob[mob.length - 1];
         me.isBoss = true;
-        me.accelMag = 0.0004 + 0.0002 * Math.sqrt(simulation.accelScale)
+        me.accelMag = 0.0001 + 0.0004 * Math.sqrt(simulation.accelScale)
+        // me.accelMag = 0.0004 + 0.0002 * Math.sqrt(simulation.accelScale)
         me.memory = 250;
         me.laserRange = 500;
         Matter.Body.setDensity(me, 0.0022 + 0.00022 * Math.sqrt(simulation.difficulty)); //extra dense //normal is 0.001 //makes effective life much larger
-        me.startingDamageReduction = 0.25 / (tech.isScaleMobsWithDuplication ? 1 + tech.duplicationChance() : 1)
+        me.startingDamageReduction = 0.14 / (tech.isScaleMobsWithDuplication ? 1 + tech.duplicationChance() : 1)
         me.damageReduction = 0
         me.isInvulnerable = true
 
@@ -5946,13 +6240,13 @@ const spawn = {
         me.cycle = 0
         me.do = function() {
             // this.armor();
-            this.seePlayerByHistory()
+            this.seePlayerByHistory(40)
             this.checkStatus();
             this.attraction();
             this.cycle++
             if (this.seePlayer.recall && ((this.cycle % 10) === 0)) {
                 if (this.canFire) {
-                    if (this.cycle > 100) {
+                    if (this.cycle > 120) {
                         this.cycle = 0
                         this.canFire = false
                         // Matter.Body.setAngularVelocity(this, 0.1)
@@ -5963,7 +6257,7 @@ const spawn = {
                     }
                     spawn.seeker(this.vertices[this.closestVertex1].x, this.vertices[this.closestVertex1].y, 6)
                     Matter.Body.setDensity(mob[mob.length - 1], 0.000001); //normal is 0.001
-                    const velocity = Vector.mult(Vector.normalise(Vector.sub(this.position, this.vertices[this.closestVertex1])), -13)
+                    const velocity = Vector.mult(Vector.normalise(Vector.sub(this.vertices[this.closestVertex1], this.position)), 15)
                     Matter.Body.setVelocity(mob[mob.length - 1], {
                         x: this.velocity.x + velocity.x,
                         y: this.velocity.y + velocity.y
@@ -5975,7 +6269,7 @@ const spawn = {
                     //     x: this.velocity.x + velocity2.x,
                     //     y: this.velocity.y + velocity2.y
                     // });
-                } else if (this.cycle > 210) {
+                } else if (this.cycle > 200) {
                     this.cycle = 0
                     this.canFire = true
 
@@ -6007,22 +6301,19 @@ const spawn = {
             }
         };
         //extra space to give head room
-        angle -= 0.1
-        mag -= 10
+        angle -= 0.07
         let previousTailID = 0
-
+        const nodes = Math.min(10 + Math.ceil(0.6 * simulation.difficulty), 60)
         for (let i = 0; i < nodes; ++i) {
-            angle -= 0.15 + i * 0.008
-            mag -= (i < 2) ? -15 : 5
-            spawn.snakeBody(x + mag * Math.cos(angle), y + mag * Math.sin(angle), i === 0 ? 25 : 20);
-            // mag -= 5
-            // spawn.snakeBody(x + mag * Math.cos(angle), y + mag * Math.sin(angle), 20);
-            if (i < 3) mob[mob.length - 1].snakeHeadID = me.id
+            angle -= 0.1
+            spawn.snakeBody(x + tailRadius * Math.cos(angle), y + tailRadius * Math.sin(angle), i === 0 ? 25 : 20);
+            if (i < 4) mob[mob.length - 1].snakeHeadID = me.id
             mob[mob.length - 1].previousTailID = previousTailID
             previousTailID = mob[mob.length - 1].id
         }
-        this.constrain2AdjacentMobs(nodes, Math.random() * 0.06 + 0.01);
-
+        const damping = 1
+        const stiffness = 1
+        this.constrain2AdjacentMobs(nodes, stiffness, false, damping);
         for (let i = mob.length - 1, len = i - nodes; i > len; i--) { //set alternating colors
             if (i % 2) {
                 mob[i].fill = "#778"
@@ -6034,39 +6325,44 @@ const spawn = {
         consBB[consBB.length] = Constraint.create({
             bodyA: mob[mob.length - nodes],
             bodyB: mob[mob.length - 1 - nodes],
-            stiffness: 0.05
+            stiffness: stiffness,
+            damping: damping
         });
         Composite.add(engine.world, consBB[consBB.length - 1]);
         consBB[consBB.length] = Constraint.create({
             bodyA: mob[mob.length - nodes + 1],
             bodyB: mob[mob.length - 1 - nodes],
-            stiffness: 0.05
+            stiffness: stiffness,
+            damping: damping
         });
         Composite.add(engine.world, consBB[consBB.length - 1]);
         consBB[consBB.length] = Constraint.create({
             bodyA: mob[mob.length - nodes + 2],
             bodyB: mob[mob.length - 1 - nodes],
-            stiffness: 0.05
+            stiffness: stiffness,
+            damping: damping
         });
         Composite.add(engine.world, consBB[consBB.length - 1]);
-        // spawn.shield(me, x, y, 1);
     },
     dragonFlyBoss(x, y, radius = 42) { //snake boss with a laser head
-        const nodes = Math.min(8 + Math.ceil(0.5 * simulation.difficulty), 40)
         let angle = Math.PI
-        let mag = 300
-
-        const color1 = "#00bfd9" //"#f27"
-        mobs.spawn(x + mag * Math.cos(angle), y + mag * Math.sin(angle), 8, radius, "#000"); //"rgb(55,170,170)"
+        const tailRadius = 300
+        mobs.spawn(x + tailRadius * Math.cos(angle), y + tailRadius * Math.sin(angle), 8, radius, "#000"); //"rgb(55,170,170)"
         let me = mob[mob.length - 1];
         me.isBoss = true;
-        me.accelMag = 0.0009 + 0.0002 * Math.sqrt(simulation.accelScale)
-        me.memory = 250;
-        me.laserRange = 400;
         Matter.Body.setDensity(me, 0.00165 + 0.00011 * Math.sqrt(simulation.difficulty)); //extra dense //normal is 0.001 //makes effective life much larger
-        me.startingDamageReduction = 0.2 / (tech.isScaleMobsWithDuplication ? 1 + tech.duplicationChance() : 1)
+        me.startingDamageReduction = 0.14 / (tech.isScaleMobsWithDuplication ? 1 + tech.duplicationChance() : 1)
         me.damageReduction = 0
         me.isInvulnerable = true
+
+        me.accelMag = 0.00008 + 0.00045 * Math.sqrt(simulation.accelScale)
+        me.memory = 250;
+        me.seePlayerFreq = 13
+        me.flapRate = 0.4
+        me.flapArc = 0.2 //don't go past 1.57 for normal flaps
+        me.wingLength = 150
+        me.ellipticity = 0.3
+        me.angleOff = 0.4
 
         me.onDeath = function() {
             powerUps.spawnBossPowerUp(this.position.x, this.position.y)
@@ -6075,7 +6371,7 @@ const spawn = {
             }
         };
         me.do = function() {
-            this.seePlayerByHistory()
+            this.seePlayerByHistory(40)
             this.checkStatus();
             this.attraction();
 
@@ -6101,61 +6397,58 @@ const spawn = {
             this.wing(a - Math.PI / 2 + this.angleOff + this.flapArc * Math.sin(simulation.cycle * this.flapRate), this.wingLength, this.ellipticity)
             this.wing(a + Math.PI / 2 - this.angleOff - this.flapArc * Math.sin(simulation.cycle * this.flapRate), this.wingLength, this.ellipticity)
         };
-        me.flapRate = 0.4
-        me.flapArc = 0.2 //don't go past 1.57 for normal flaps
-        me.wingLength = 150
-        me.ellipticity = 0.3
-        me.angleOff = 0.4
-        //extra space to give head room
-        angle -= 0.1
-        mag -= 10
+
+        angle -= 0.07
         let previousTailID = 0
+        const nodes = Math.min(10 + Math.ceil(0.6 * simulation.difficulty), 60)
         for (let i = 0; i < nodes; ++i) {
-            angle -= 0.15 + i * 0.008
-            mag -= (i < 2) ? -15 : 5
-            spawn.snakeBody(x + mag * Math.cos(angle), y + mag * Math.sin(angle), i === 0 ? 25 : 20);
-            if (i < 3) mob[mob.length - 1].snakeHeadID = me.id
-            if (i === 0) me.snakeBody1 = mob[mob.length - 1] //track this segment, so the difference in position between this segment and the head can be used to angle the wings
-            mob[mob.length - 1].previousTailID = previousTailID
-            previousTailID = mob[mob.length - 1].id
+            angle -= 0.1
+            spawn.snakeBody(x + tailRadius * Math.cos(angle), y + tailRadius * Math.sin(angle), i === 0 ? 25 : 20);
+            const who = mob[mob.length - 1]
+            who.fill = `hsl(${160+40*Math.random()}, 100%, ${5 + 25*Math.random()*Math.random()}%)`
+            if (i < 4) who.snakeHeadID = me.id
+            if (i === 0) me.snakeBody1 = who //track this segment, so the difference in position between this segment and the head can be used to angle the wings
+            who.previousTailID = previousTailID
+            previousTailID = who.id
         }
-        this.constrain2AdjacentMobs(nodes, Math.random() * 0.06 + 0.01);
-        for (let i = mob.length - 1, len = i - nodes; i > len; i--) { //set alternating colors
-            mob[i].fill = `hsla(${160+40*Math.random()}, 100%, ${5 + 25*Math.random()*Math.random()}%, 0.9)`
-        }
-        //constraint with first 3 mobs in line
+        const damping = 1
+        const stiffness = 1
+        this.constrain2AdjacentMobs(nodes, stiffness, false, damping);
+        //constraint with first few mobs in tail
         consBB[consBB.length] = Constraint.create({
             bodyA: mob[mob.length - nodes],
             bodyB: mob[mob.length - 1 - nodes],
-            stiffness: 0.05
+            stiffness: stiffness,
+            damping: damping
         });
         Composite.add(engine.world, consBB[consBB.length - 1]);
         consBB[consBB.length] = Constraint.create({
             bodyA: mob[mob.length - nodes + 1],
             bodyB: mob[mob.length - 1 - nodes],
-            stiffness: 0.05
+            stiffness: stiffness,
+            damping: damping
         });
         Composite.add(engine.world, consBB[consBB.length - 1]);
         consBB[consBB.length] = Constraint.create({
             bodyA: mob[mob.length - nodes + 2],
             bodyB: mob[mob.length - 1 - nodes],
-            stiffness: 0.05
+            stiffness: stiffness,
+            damping: damping
         });
         Composite.add(engine.world, consBB[consBB.length - 1]);
-        // spawn.shield(me, x, y, 1);
     },
     snakeBody(x, y, radius = 10) {
         mobs.spawn(x, y, 8, radius, "rgba(0,180,180,0.4)");
         let me = mob[mob.length - 1];
-        me.collisionFilter.mask = cat.bullet | cat.player | cat.mob //| cat.body
-        me.damageReduction = 0.23
-        Matter.Body.setDensity(me, 0.005); //normal is 0.001
+        me.collisionFilter.mask = cat.bullet | cat.player //| cat.mob //| cat.body
+        me.damageReduction = 0.024
+        Matter.Body.setDensity(me, 0.0001); //normal is 0.001
 
         // me.accelMag = 0.0007 * simulation.accelScale;
         me.leaveBody = Math.random() < 0.33 ? true : false;
         me.showHealthBar = false;
         me.isDropPowerUp = false;
-        me.frictionAir = 0.015;
+        me.frictionAir = 0;
         me.isSnakeTail = true;
         me.stroke = "transparent"
         me.onDeath = function() {
@@ -6346,7 +6639,7 @@ const spawn = {
             Matter.Body.setPosition(this, Vector.add(Vector.add(who.position, who.velocity), Vector.mult(orbit, radius))) //bullets move with player
             //damage player
             if (Matter.Query.collides(this, [player]).length > 0 && !(m.isCloak && tech.isIntangible) && m.immuneCycle < m.cycle) {
-                m.immuneCycle = m.cycle + tech.collisionImmuneCycles; //player is immune to damage for 30 cycles
+                m.immuneCycle = m.cycle + m.collisionImmuneCycles; //player is immune to damage for 30 cycles
                 const dmg = 0.03 * simulation.dmgScale
                 m.damage(dmg);
                 simulation.drawList.push({ //add dmg to draw queue
@@ -6476,13 +6769,14 @@ const spawn = {
             }
         }
     },
-    constrain2AdjacentMobs(nodes, stiffness, loop = false) {
+    constrain2AdjacentMobs(nodes, stiffness, loop = false, damping = 0) {
         //runs through every combination of last 'num' bodies and constrains them
         for (let i = 0; i < nodes - 1; ++i) {
             consBB[consBB.length] = Constraint.create({
                 bodyA: mob[mob.length - i - 1],
                 bodyB: mob[mob.length - i - 2],
-                stiffness: stiffness
+                stiffness: stiffness,
+                damping: damping
             });
             Composite.add(engine.world, consBB[consBB.length - 1]);
         }
@@ -6491,7 +6785,8 @@ const spawn = {
                 consBB[consBB.length] = Constraint.create({
                     bodyA: mob[mob.length - i - 1],
                     bodyB: mob[mob.length - i - 3],
-                    stiffness: stiffness
+                    stiffness: stiffness,
+                    damping: damping
                 });
                 Composite.add(engine.world, consBB[consBB.length - 1]);
             }
@@ -6501,19 +6796,22 @@ const spawn = {
             consBB[consBB.length] = Constraint.create({
                 bodyA: mob[mob.length - 1],
                 bodyB: mob[mob.length - nodes],
-                stiffness: stiffness
+                stiffness: stiffness,
+                damping: damping
             });
             Composite.add(engine.world, consBB[consBB.length - 1]);
             consBB[consBB.length] = Constraint.create({
                 bodyA: mob[mob.length - 2],
                 bodyB: mob[mob.length - nodes],
-                stiffness: stiffness
+                stiffness: stiffness,
+                damping: damping
             });
             Composite.add(engine.world, consBB[consBB.length - 1]);
             consBB[consBB.length] = Constraint.create({
                 bodyA: mob[mob.length - 1],
                 bodyB: mob[mob.length - nodes + 1],
-                stiffness: stiffness
+                stiffness: stiffness,
+                damping: damping
             });
             Composite.add(engine.world, consBB[consBB.length - 1]);
         }

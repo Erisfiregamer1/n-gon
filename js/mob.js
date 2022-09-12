@@ -235,7 +235,10 @@ const mobs = {
     //     })
     //   }
     // },
-
+    mobSpawnWithHealth: 1,
+    setMobSpawnHealth() {
+        mobs.mobSpawnWithHealth = 0.88 ** (tech.mobSpawnWithHealth) //+ (m.fieldMode === 0 || m.fieldMode === 7) * m.coupling
+    },
     //**********************************************************************************************
     //**********************************************************************************************
     spawn(xPos, yPos, sides, radius, color) {
@@ -256,7 +259,7 @@ const mobs = {
             onHit: undefined,
             alive: true,
             index: i,
-            health: tech.mobSpawnWithHealth,
+            health: mobs.mobSpawnWithHealth,
             showHealthBar: true,
             accelMag: 0.001 * simulation.accelScale,
             cd: 0, //game cycle when cooldown will be over
@@ -602,7 +605,6 @@ const mobs = {
                 const hitPlayer = Matter.Query.ray([player], this.position, Vector.add(this.position, Vector.mult(perp, radius * 2.05)), minorRadius)
                 if (hitPlayer.length && m.immuneCycle < m.cycle) {
                     m.damage(dmg * simulation.dmgScale);
-                    // m.immuneCycle = m.cycle + tech.collisionImmuneCycles; //player is immune to damage
                 }
             },
             searchSpring() {
@@ -897,7 +899,7 @@ const mobs = {
                 //accelerate towards the searchTarget
                 if (!this.seePlayer.recall) {
                     const newTarget = function(that) {
-                        if (Math.random() < 0.0005) {
+                        if (Math.random() < 0.0007) {
                             that.searchTarget = player.position; //chance to target player
                         } else {
                             //target random body
@@ -1242,18 +1244,6 @@ const mobs = {
                                 tech.extraMaxHealth -= amount //decrease max health
                                 m.setMaxHealth();
                             }
-                        }
-                    }
-                    if (tech.removeMaxHealthOnKill) {
-                        const amount = 0.002
-                        if (tech.isEnergyHealth) {
-                            if (m.maxEnergy > amount) {
-                                tech.healMaxEnergyBonus -= amount
-                                m.setMaxEnergy();
-                            }
-                        } else if (m.maxHealth > amount) {
-                            tech.extraMaxHealth -= amount //decrease max health
-                            m.setMaxHealth();
                         }
                     }
                     if (tech.cloakDuplication && !this.isBoss) {

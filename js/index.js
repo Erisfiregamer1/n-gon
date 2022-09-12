@@ -226,6 +226,15 @@ for (let i = 0, len = tech.tech.length; i < len; i++) {
 }
 const build = {
     pauseGrid() {
+        //used for junk estimation
+        let junkCount = 0
+        let totalCount = 1 //start at one to avoid NaN issues
+        for (let i = 0; i < tech.tech.length; i++) {
+            if (tech.tech[i].count < tech.tech[i].maxCount && tech.tech[i].allowed() && !tech.tech[i].isBanished) {
+                totalCount += tech.tech[i].frequency
+                if (tech.tech[i].isJunk) junkCount += tech.tech[i].frequency
+            }
+        }
         //left side
         let botText = ""
         if (tech.nailBotCount) botText += `<br>nail-bots: ${tech.nailBotCount}`
@@ -246,13 +255,16 @@ const build = {
 <br><strong class='color-d'>damage</strong>: ${((tech.damageFromTech())).toPrecision(3)} &nbsp; &nbsp; difficulty: ${((m.dmgScale)).toPrecision(3)}
 <br><strong class='color-defense'>defense</strong>: ${(1-m.harmReduction()).toPrecision(3)} &nbsp; &nbsp; difficulty: ${(1/simulation.dmgScale).toPrecision(3)}
 <br><strong><em>fire rate</em></strong>: ${((1-b.fireCDscale)*100).toFixed(b.fireCDscale < 0.1 ? 2 : 0)}%
-<br><strong class='color-dup'>duplication</strong>: ${(tech.duplicationChance()*100).toFixed(0)}%
+${tech.duplicationChance() ?  `<br><strong class='color-dup'>duplication</strong>: ${(tech.duplicationChance()*100).toFixed(0)}%`: ""}
+${m.coupling ? `<br><strong class='color-coupling'>coupling</strong>: ${(m.coupling).toFixed(2)} &nbsp; <span style = 'font-size:90%;'>`+m.couplingDescription()+"</span>": ""}
 ${botText}
 <br>
 <br><strong class='color-h'>health</strong>: (${(m.health*100).toFixed(0)} / ${(m.maxHealth*100).toFixed(0)})
-<br><strong class='color-f'>energy</strong>: (${(m.energy*100).toFixed(0)} / ${(m.maxEnergy*100).toFixed(0)})
+<br><strong class='color-f'>energy</strong>: (${(m.energy*100).toFixed(0)} / ${(m.maxEnergy*100).toFixed(0)}) +(${(m.fieldRegen*6000).toFixed(0)}/s)
 <br><strong class='color-g'>gun</strong>: ${b.activeGun === null || b.activeGun === undefined ? "undefined":b.guns[b.activeGun].name} &nbsp; <strong class='color-g'>ammo</strong>: ${b.activeGun === null || b.activeGun === undefined ? "0":b.guns[b.activeGun].ammo}
-<br><strong class='color-m'>tech</strong>: ${tech.totalCount}  &nbsp; <strong class='color-r'>research</strong>: ${powerUps.research.count}     
+<br><strong class='color-m'>tech</strong>: ${tech.totalCount}  &nbsp; <strong class='color-r'>research</strong>: ${powerUps.research.count}  
+${junkCount ?  `<br><strong class='color-j'>JUNK</strong>: ${(junkCount / totalCount * 100).toFixed(1)}%  `: ""}
+ 
 <br>
 <br>seed: ${Math.initialSeed}
 <br>level: ${level.levels[level.onLevel]} (${level.difficultyText()}) &nbsp; ${m.cycle} cycles
@@ -418,7 +430,7 @@ ${simulation.isCheating ? "<br><br><em>lore disabled</em>": ""}
         //update tech text //disable not allowed tech
         for (let i = 0, len = tech.tech.length; i < len; i++) {
             const techID = document.getElementById("tech-" + i)
-            if (!tech.tech[i].isExperimentHide && !tech.tech[i].isNonRefundable && (!tech.tech[i].isJunk || tech.tech[i].isExperimentalMode || localSettings.isJunkExperiment)) {
+            if ((!tech.tech[i].isJunk || localSettings.isJunkExperiment)) { //!tech.tech[i].isNonRefundable && //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  does removing this cause problems????
                 if (tech.tech[i].allowed() || isAllowed || tech.tech[i].count > 0) {
                     const techCountText = tech.tech[i].count > 1 ? `(${tech.tech[i].count}x)` : "";
                     // <div class="circle-grid-small research" style="position:absolute; top:13px; left:30px;opacity:0.85;"></div>
@@ -447,8 +459,6 @@ ${simulation.isCheating ? "<br><br><em>lore disabled</em>": ""}
                         </div>`
                     } else if (tech.tech[i].isJunk) {
                         techID.innerHTML = `<div class="grid-title"><div class="circle-grid junk"></div> &nbsp; ${tech.tech[i].link} ${techCountText}</div>${tech.tech[i].descriptionFunction ? tech.tech[i].descriptionFunction() : tech.tech[i].description}</div>`
-                    } else if (tech.tech[i].isExperimentalMode) {
-                        techID.innerHTML = `<div class="grid-title">${tech.tech[i].name}</div>${tech.tech[i].descriptionFunction ? tech.tech[i].descriptionFunction() :tech.tech[i].description}</div>`
                     } else {
                         techID.innerHTML = `<div class="grid-title"><div class="circle-grid tech"></div> &nbsp; ${tech.tech[i].link} ${techCountText}</div>${tech.tech[i].descriptionFunction ? tech.tech[i].descriptionFunction() : tech.tech[i].description}</div>`
                     }
@@ -518,11 +528,9 @@ ${simulation.isCheating ? "<br><br><em>lore disabled</em>": ""}
             text += `<div id = "gun-${i}" class="experiment-grid-module" onclick="build.choosePowerUp(this,${i},'gun')"><div class="grid-title"><div class="circle-grid gun"></div> &nbsp; ${build.nameLink(b.guns[i].name)}</div> ${b.guns[i].description}</div>`
         }
         for (let i = 0, len = tech.tech.length; i < len; i++) {
-            if (!tech.tech[i].isExperimentHide && (!tech.tech[i].isJunk || localSettings.isJunkExperiment)) { //&& (!tech.tech[i].isNonRefundable || tech.tech[i].isExperimentalMode)) {
-                if (tech.tech[i].allowed() && (!tech.tech[i].isNonRefundable || tech.tech[i].isExperimentalMode || localSettings.isJunkExperiment)) { // || tech.tech[i].name === "+1 cardinality") { //|| tech.tech[i].name === "leveraged investment"
-                    if (tech.tech[i].isExperimentalMode) {
-                        text += `<div id="tech-${i}" class="experiment-grid-module" onclick="build.choosePowerUp(this,${i},'tech')"><div class="grid-title">${tech.tech[i].name}</div> ${tech.tech[i].descriptionFunction ? tech.tech[i].descriptionFunction() :tech.tech[i].description}</div>`
-                    } else if (tech.tech[i].isJunk) {
+            if (!tech.tech[i].isJunk || localSettings.isJunkExperiment) {
+                if (tech.tech[i].allowed() && (!tech.tech[i].isNonRefundable || localSettings.isJunkExperiment)) { // || tech.tech[i].name === "+1 cardinality") { //|| tech.tech[i].name === "leveraged investment"
+                    if (tech.tech[i].isJunk) {
                         text += `<div id="tech-${i}" class="experiment-grid-module" onclick="build.choosePowerUp(this,${i},'tech')"><div class="grid-title"><div class="circle-grid junk"></div> &nbsp; ${tech.tech[i].link}</div> ${tech.tech[i].descriptionFunction ? tech.tech[i].descriptionFunction() :tech.tech[i].description}</div>`
                     } else {
                         text += `<div id="tech-${i}" class="experiment-grid-module" onclick="build.choosePowerUp(this,${i},'tech')"><div class="grid-title"><div class="circle-grid tech"></div> &nbsp; ${tech.tech[i].link}</div> ${tech.tech[i].descriptionFunction ? tech.tech[i].descriptionFunction() :tech.tech[i].description}</div>`
@@ -586,7 +594,7 @@ ${simulation.isCheating ? "<br><br><em>lore disabled</em>": ""}
         count = 0;
         for (let i = 0; i < tech.tech.length; i++) {
             for (let j = 0; j < tech.tech[i].count; j++) {
-                if (!tech.tech[i].isLore && !tech.tech[i].isJunk && !tech.tech[i].isNonRefundable && !tech.tech[i].isExperimentHide) {
+                if (!tech.tech[i].isLore && !tech.tech[i].isJunk && !tech.tech[i].isNonRefundable) {
                     url += `&tech${count}=${encodeURIComponent(tech.tech[i].name.trim())}`
                     count++
                 }
@@ -655,13 +663,7 @@ ${simulation.isCheating ? "<br><br><em>lore disabled</em>": ""}
         build.hasExperimentalMode = false
         if (!simulation.isCheating) {
             for (let i = 0, len = tech.tech.length; i < len; i++) {
-                if (tech.tech[i].count > 0) {
-                    if (tech.tech[i].isExperimentalMode) {
-                        build.hasExperimentalMode = true
-                    } else if (!tech.tech[i].isLore) {
-                        simulation.isCheating = true;
-                    }
-                }
+                if (tech.tech[i].count > 0 && !tech.tech[i].isLore) simulation.isCheating = true;
             }
             if (b.inventory.length !== 0 || m.fieldMode !== 0) simulation.isCheating = true;
         }
@@ -920,7 +922,7 @@ window.addEventListener("keydown", function(event) {
             input.fire = true
             break
         case input.key.field:
-            event.preventDefault();
+            // event.preventDefault();
             input.field = true
             break
         case input.key.nextGun:
@@ -948,18 +950,18 @@ window.addEventListener("keydown", function(event) {
 
                     if (tech.isPauseSwitchField || simulation.testing) {
                         document.getElementById("pause-field").addEventListener("click", () => {
-                            const energy = m.energy
+                            const energy = m.energy //save current energy
                             if (m.fieldMode === 4 && simulation.molecularMode < 3) {
                                 simulation.molecularMode++
                                 m.fieldUpgrades[4].description = m.fieldUpgrades[4].setDescription()
                             } else {
-                                m.setField((m.fieldMode === m.fieldUpgrades.length - 1) ? 1 : m.fieldMode + 1) //cycle to next field
+                                m.setField((m.fieldMode === m.fieldUpgrades.length - 1) ? 0 : m.fieldMode + 1) //cycle to next field
                                 if (m.fieldMode === 4) {
                                     simulation.molecularMode = 0
                                     m.fieldUpgrades[4].description = m.fieldUpgrades[4].setDescription()
                                 }
                             }
-                            m.energy = energy
+                            m.energy = energy //return to current energy
                             document.getElementById("pause-field").innerHTML = `<div class="grid-title"><div class="circle-grid field"></div> &nbsp; ${m.fieldUpgrades[m.fieldMode].name}</div> ${m.fieldUpgrades[m.fieldMode].description}`
                         });
                     }
@@ -970,7 +972,7 @@ window.addEventListener("keydown", function(event) {
             if (m.alive && localSettings.loreCount > 0) {
                 if (simulation.difficultyMode > 4) {
                     simulation.makeTextLog("<em>testing mode disabled for this difficulty</em>");
-                    // break
+                    break
                 }
                 if (simulation.testing) {
                     simulation.testing = false;
@@ -1248,7 +1250,6 @@ if (localstorageCheck()) {
     localSettings = { isAllowed: false }
 }
 
-
 if (localSettings.isAllowed && !localSettings.isEmpty) {
     console.log('restoring previous settings')
 
@@ -1279,10 +1280,19 @@ if (localSettings.isAllowed && !localSettings.isEmpty) {
         simulation.fpsCapDefault = Number(localSettings.fpsCapDefault)
     }
     document.getElementById("fps-select").value = localSettings.fpsCapDefault
+
+    if (!localSettings.banList) localSettings.banList = ""
+    if (localSettings.banList.length === 0 || localSettings.banList === "undefined") {
+        localSettings.banList = ""
+        localStorage.setItem("localSettings", JSON.stringify(localSettings)); //update local storage
+    }
+    document.getElementById("banned").value = localSettings.banList
+
 } else {
     console.log('setting default localSettings')
     const isAllowed = localSettings.isAllowed //don't overwrite isAllowed value
     localSettings = {
+        banList: "",
         isAllowed: isAllowed,
         personalSeeds: [],
         isJunkExperiment: false,
@@ -1302,6 +1312,7 @@ if (localSettings.isAllowed && !localSettings.isEmpty) {
     simulation.isCommunityMaps = localSettings.isCommunityMaps
     document.getElementById("difficulty-select").value = localSettings.difficultyMode
     document.getElementById("fps-select").value = localSettings.fpsCapDefault
+    document.getElementById("banned").value = localSettings.banList
 }
 document.getElementById("control-testing").style.visibility = (localSettings.loreCount === 0) ? "hidden" : "visible"
 // document.getElementById("experiment-button").style.visibility = (localSettings.loreCount === 0) ? "hidden" : "visible"
@@ -1319,6 +1330,11 @@ document.getElementById("fps-select").addEventListener("input", () => {
         simulation.fpsCapDefault = Number(value)
     }
     localSettings.fpsCapDefault = value
+    if (localSettings.isAllowed) localStorage.setItem("localSettings", JSON.stringify(localSettings)); //update local storage
+});
+
+document.getElementById("banned").addEventListener("input", () => {
+    localSettings.banList = document.getElementById("banned").value
     if (localSettings.isAllowed) localStorage.setItem("localSettings", JSON.stringify(localSettings)); //update local storage
 });
 

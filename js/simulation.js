@@ -449,9 +449,9 @@ const simulation = {
         }
     },
     switchGun() {
-        if (tech.isLongitudinal && b.guns[b.activeGun].name === "matter wave") {
+        if (tech.isLongitudinal && b.guns[b.activeGun].name === "wave") {
             for (i = 0, len = b.guns.length; i < len; i++) { //find which gun
-                if (b.guns[i].name === "matter wave") {
+                if (b.guns[i].name === "wave") {
                     b.guns[i].waves = []; //empty array of wave bullets
                     break;
                 }
@@ -775,6 +775,7 @@ const simulation = {
         powerUps.field.choiceLog = [];
         powerUps.totalPowerUps = 0;
         powerUps.research.count = 0;
+        powerUps.boost.endCycle = 0
         m.setFillColors();
         // m.maxHealth = 1
         // m.maxEnergy = 1
@@ -816,7 +817,6 @@ const simulation = {
         m.alive = true;
         m.onGround = false
         m.lastOnGroundCycle = 0
-        m.setMaxHealth()
         m.health = 0;
         m.addHealth(0.25)
         m.drop();
@@ -838,8 +838,8 @@ const simulation = {
         // <br>input.key.field <span class='color-symbol'>=</span> ["<span class='color-text'>${input.key.field}</span>", "<span class='color-text'>right mouse</span>"]
         // <br><span class='color-var'>m</span>.field.description <span class='color-symbol'>=</span> "<span class='color-text'>${m.fieldUpgrades[m.fieldMode].description}</span>"
         // `, 800);
-
-        m.setField(0)
+        m.coupling = 0
+        m.setField(0) //this calls m.couplingChange(), which sets max health and max energy
         // m.energy = 0;
         //exit testing
         if (simulation.testing) {
@@ -870,7 +870,7 @@ const simulation = {
         if (m.alive) {
             if (tech.isLongitudinal) {
                 for (i = 0, len = b.guns.length; i < len; i++) { //find which gun
-                    if (b.guns[i].name === "matter wave") {
+                    if (b.guns[i].name === "wave") {
                         b.guns[i].waves = []; //empty array of wave bullets
                         break;
                     }
@@ -1459,21 +1459,22 @@ const simulation = {
                 const y = round(simulation.constructMouseDownPosition.y)
                 const dx = Math.max(25, round(simulation.mouseInGame.x) - x)
                 const dy = Math.max(25, round(simulation.mouseInGame.y) - y)
-
-                if (e.button === 2) {
+                console.log(e.button)
+                if (e.button === 1) {
                     if (level.isProcedural) {
-                        simulation.outputMapString(`spawn.randomMob(x+${x}, y+${y}, 0);`);
+                        simulation.outputMapString(`spawn.randomMob(x+${x}, y+${y}, 0);\n`);
                     } else {
-                        simulation.outputMapString(`spawn.randomMob(${x}, ${y}, 0);`);
+                        simulation.outputMapString(`spawn.randomMob(${x}, ${y}, 0);\n`);
                     }
                 } else if (e.button === 4) {
                     simulation.outputMapString(`${Math.floor(simulation.constructMouseDownPosition.x)}, ${Math.floor(simulation.constructMouseDownPosition.y)}`);
                 } else if (simulation.mouseInGame.x > simulation.constructMouseDownPosition.x && simulation.mouseInGame.y > simulation.constructMouseDownPosition.y) { //make sure that the width and height are positive
-                    if (e.button === 1) { //add map
+
+                    if (e.button === 0) { //add map
                         if (level.isProcedural) {
-                            simulation.outputMapString(`spawn.mapRect(x+${x}, y+${y}, ${dx}, ${dy});`);
+                            simulation.outputMapString(`spawn.mapRect(x+${x}, y+${y}, ${dx}, ${dy});\n`);
                         } else {
-                            simulation.outputMapString(`spawn.mapRect(${x}, ${y}, ${dx}, ${dy});`);
+                            simulation.outputMapString(`spawn.mapRect(${x}, ${y}, ${dx}, ${dy});\n`);
 
                         }
                         //see map in world
@@ -1485,11 +1486,11 @@ const simulation = {
                         Composite.add(engine.world, map[len]); //add to world
                         simulation.draw.setPaths() //update map graphics
 
-                    } else if (e.button === 3) { //add body
+                    } else if (e.button === 2) { //add body
                         if (level.isProcedural) {
-                            simulation.outputMapString(`spawn.bodyRect(x+${x}, y+${y}, ${dx}, ${dy});`);
+                            simulation.outputMapString(`spawn.bodyRect(x+${x}, y+${y}, ${dx}, ${dy});\n`);
                         } else {
-                            simulation.outputMapString(`spawn.bodyRect(${x}, ${y}, ${dx}, ${dy});`);
+                            simulation.outputMapString(`spawn.bodyRect(${x}, ${y}, ${dx}, ${dy});\n`);
                         }
 
                         //see map in world
@@ -1514,6 +1515,7 @@ const simulation = {
             }
         });
 
+        //undo last element added after you press z
         document.body.addEventListener("keydown", (e) => { // e.keyCode   z=90  m=77 b=66  shift = 16  c = 67
             if (simulation.testing && e.keyCode === 90 && simulation.constructMapString.length) {
                 if (simulation.constructMapString[simulation.constructMapString.length - 1][6] === 'm') { //remove map from current level
